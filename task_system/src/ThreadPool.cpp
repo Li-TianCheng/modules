@@ -17,7 +17,7 @@ void ThreadPool::addTask(void (*task)(void *), void *arg) {
     mutex.lock();
     while(shutdown == 0 && taskQueue.size() == queueSize){
         Event* e = ObjPool::allocate<Event>(EventIncreasePool, this,nullptr);
-        addEvent(e);
+        receiveEvent(e);
         condition.wait(mutex);
     }
     taskQueue.push(TaskNode(task, arg));
@@ -25,7 +25,7 @@ void ThreadPool::addTask(void (*task)(void *), void *arg) {
 }
 
 void ThreadPool::cycleInit() {
-    TimeSystem::addEvent(EventTicker, (Time*)&CheckTime, this);
+    TimeSystem::receiveEvent(EventTicker, (Time *) &CheckTime, this);
     for(auto& thread : threadPool){
         Input* arg = ObjPool::allocate<Input>(Input(this, &thread));
         thread.run(taskRoutine, arg);

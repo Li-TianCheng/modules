@@ -30,7 +30,7 @@ public:
     EventSystem() = default;
     void registerEvent(EventKey eventType, void (*handleEvent)(Event*));
     void unregisterEvent(EventKey eventType);
-    void addEvent(Event* e);
+    void receiveEvent(Event* e);
     void doEvent(Event* e);
     Event* getEvent();
     void cycle();

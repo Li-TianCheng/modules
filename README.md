@@ -33,9 +33,9 @@
 * 利用epoll进行定时,来推动时间轮
 * 当相应的定时器过期时,会向事件添加者发送事件
 ##### 运行时图示
-![](./modules.png)
+![](https://github.com/Li-TianCheng/modules/blob/main/modules.png)
 ### 用法
 1. 在main开始时调用modules::init使各个模块初始化
 2. 在main结束时调用modules::close使各个模块关闭
-* 调用TimeSystem::addEvent(),即可添加时间事件，时间间隔为struct Time(h, m, s, ms)
+* 调用TimeSystem::receiveEvent(),即可添加时间事件，时间间隔为struct Time(h, m, s, ms)
 * 调用TaskSystem::addTask(),即可添加任务

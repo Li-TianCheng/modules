@@ -12,7 +12,7 @@ void EventSystem::unregisterEvent(EventKey eventType) {
     map.erase(eventType);
 }
 
-void EventSystem::addEvent(Event* e) {
+void EventSystem::receiveEvent(Event* e) {
     mutex.lock();
     eventQueue.push(e);
     condition.notifyAll(mutex);

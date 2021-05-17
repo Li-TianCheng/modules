@@ -13,7 +13,7 @@ class TimeSystem{
 public:
     static void init();
     static void close();
-    static void addEvent(EventKey eventType, Time* arg, EventSystem* ptr);
+    static void receiveEvent(EventKey eventType, Time* arg, EventSystem* ptr);
     TimeSystem(const TimeSystem&) = delete;
     TimeSystem(TimeSystem&&) = delete;
     TimeSystem& operator=(const TimeSystem&) = delete;

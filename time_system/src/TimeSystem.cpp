@@ -16,16 +16,16 @@ void *TimeSystem::handle(void *) {
 
 void TimeSystem::close() {
     Event* e = ObjPool::allocate<Event>(EventEndCycle, nullptr, nullptr);
-    getTimeWheel().addEvent(e);
+    getTimeWheel().receiveEvent(e);
     getTiming().cancel();
     getTiming().join();
     getThread().join();
 }
 
-void TimeSystem::addEvent(EventKey eventType, Time *arg, EventSystem *ptr) {
+void TimeSystem::receiveEvent(EventKey eventType, Time *arg, EventSystem *ptr) {
     arg->tPtr = &getTimeWheel();
     Event* e = ObjPool::allocate<Event>(eventType, arg, ptr);
-    getTimeWheel().addEvent(e);
+    getTimeWheel().receiveEvent(e);
 }
 
 TimeWheel &TimeSystem::getTimeWheel() {
@@ -43,7 +43,7 @@ void* TimeSystem::timing(void *) {
     while (true) {
         epoll_wait(ef, nullptr, 0, 1);
         Event* e = ObjPool::allocate<Event>(EventTimeOut, &getTimeWheel(), nullptr);
-        getTimeWheel().addEvent(e);
+        getTimeWheel().receiveEvent(e);
     }
 }
 

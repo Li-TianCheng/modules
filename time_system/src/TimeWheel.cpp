@@ -73,14 +73,14 @@ void TimeWheel::handleTickerEvent(Event* e) {
 void TimeWheel::handleTimerTimeOut(Event *e) {
     if (e->ptr != nullptr){
         Event* _e = ObjPool::allocate<Event>(EventTimerTimeOut, e->ptr, ((Time*)e)->tPtr);
-        e->ptr->addEvent(_e);
+        e->ptr->receiveEvent(_e);
     }
 }
 
 void TimeWheel::handleTickerTimeOut(Event *e) {
     if (e->ptr != nullptr){
         Event* _e = ObjPool::allocate<Event>(EventTickerTimeOut, e->ptr, ((Time*)e)->tPtr);
-        e->ptr->addEvent(_e);
+        e->ptr->receiveEvent(_e);
     }
     Event* _e = ObjPool::allocate<Event>(EventTicker, e->arg, e->ptr);
     handleTickerEvent(_e);

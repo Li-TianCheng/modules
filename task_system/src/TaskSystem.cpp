@@ -11,7 +11,7 @@ void TaskSystem::init() {
 
 void TaskSystem::close() {
     Event* e = ObjPool::allocate<Event>(EventEndCycle, nullptr, nullptr);
-    getThreadPool().addEvent(e);
+    getThreadPool().receiveEvent(e);
     getThread().join();
 }
 
