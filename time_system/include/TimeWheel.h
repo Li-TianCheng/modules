@@ -6,10 +6,12 @@
 #define TIMESYSTEM_TIMEWHEEL_H
 
 #include <vector>
-#include <sys/time.h>
+#include <uuid/uuid.h>
+#include <unordered_set>
 #include "event_system/include/EventSystem.h"
 
 using std::vector;
+using std::unordered_set;
 
 class TimeWheel;
 
@@ -18,19 +20,27 @@ struct Time{
     int s;
     int m;
     int h;
+    string uuid;
+    EventSystem* ePtr;
     TimeWheel* tPtr = nullptr;
-    Time(int h, int m, int s, int ms): ms(ms), s(s), m(m), h(h){};
+    Time(int h, int m, int s, int ms, EventSystem* ePtr): ms(ms), s(s), m(m), h(h), ePtr(ePtr){
+        uuid_t uu;
+        uuid_generate_time(uu);
+        uuid = (char*)uu;
+    };
 };
 
 class TimeWheel: public EventSystem {
 public:
     TimeWheel();
+    void deleteTicker(const string& uuid);
     TimeWheel(const TimeWheel&) = delete;
     TimeWheel(TimeWheel&&) = delete;
     TimeWheel& operator=(const TimeWheel&) = delete;
     TimeWheel& operator=(TimeWheel&&) = delete;
 private:
     void init();
+    unordered_set<string> toDelete;
     vector<queue<Event*>> millisecond;
     vector<queue<Event*>> second;
     vector<queue<Event*>> minute;

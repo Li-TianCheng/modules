@@ -20,9 +20,8 @@ class EventSystem;
 
 struct Event{
     EventKey eventType;
-    EventSystem* ptr;
     void* arg;
-    Event(EventKey eventType, void* arg, EventSystem* ptr) : eventType(eventType), arg(arg), ptr(ptr){};
+    Event(EventKey eventType, void* arg) : eventType(eventType), arg(arg){};
 };
 
 class EventSystem {

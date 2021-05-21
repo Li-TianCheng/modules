@@ -15,17 +15,18 @@ void *TimeSystem::handle(void *) {
 }
 
 void TimeSystem::close() {
-    Event* e = ObjPool::allocate<Event>(EventEndCycle, nullptr, nullptr);
+    Event* e = ObjPool::allocate<Event>(EventEndCycle, nullptr);
     getTimeWheel().receiveEvent(e);
     getTiming().cancel();
     getTiming().join();
     getThread().join();
 }
 
-void TimeSystem::receiveEvent(EventKey eventType, Time *arg, EventSystem *ptr) {
+string TimeSystem::receiveEvent(EventKey eventType, Time *arg) {
     arg->tPtr = &getTimeWheel();
-    Event* e = ObjPool::allocate<Event>(eventType, arg, ptr);
+    Event* e = ObjPool::allocate<Event>(eventType, arg);
     getTimeWheel().receiveEvent(e);
+    return arg->uuid;
 }
 
 TimeWheel &TimeSystem::getTimeWheel() {
@@ -41,8 +42,8 @@ Thread &TimeSystem::getThread() {
 void* TimeSystem::timing(void *) {
     int ef = epoll_create(1);
     while (true) {
-        epoll_wait(ef, nullptr, 0, 1);
-        Event* e = ObjPool::allocate<Event>(EventTimeOut, &getTimeWheel(), nullptr);
+        epoll_wait(ef, nullptr, 1, 1);
+        Event* e = ObjPool::allocate<Event>(EventTimeOut, &getTimeWheel());
         getTimeWheel().receiveEvent(e);
     }
 }
@@ -50,5 +51,9 @@ void* TimeSystem::timing(void *) {
 Thread &TimeSystem::getTiming() {
     static Thread thread;
     return thread;
+}
+
+void TimeSystem::deleteTicker(const string& uuid) {
+    getTimeWheel().deleteTicker(uuid);
 }
 

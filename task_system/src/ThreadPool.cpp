@@ -6,6 +6,7 @@
 
 ThreadPool::ThreadPool(int initNum, int queueSize): initNum(initNum), queueSize(queueSize), threadNum(initNum),
                                                     runningNum(0), shutdown(0), threadPool(initNum) {
+    CheckTime.ePtr = this;
     init();
 }
 
@@ -16,7 +17,7 @@ void ThreadPool::addTask(void (*task)(void *), void *arg) {
     }
     mutex.lock();
     while(shutdown == 0 && taskQueue.size() == queueSize){
-        Event* e = ObjPool::allocate<Event>(EventIncreasePool, this,nullptr);
+        Event* e = ObjPool::allocate<Event>(EventIncreasePool, this);
         receiveEvent(e);
         condition.wait(mutex);
     }
@@ -25,7 +26,7 @@ void ThreadPool::addTask(void (*task)(void *), void *arg) {
 }
 
 void ThreadPool::cycleInit() {
-    TimeSystem::receiveEvent(EventTicker, (Time *) &CheckTime, this);
+    uuid = TimeSystem::receiveEvent(EventTicker, (Time *) &CheckTime);
     for(auto& thread : threadPool){
         Input* arg = ObjPool::allocate<Input>(Input(this, &thread));
         thread.run(taskRoutine, arg);
@@ -33,6 +34,7 @@ void ThreadPool::cycleInit() {
 }
 
 void ThreadPool::cycleClear() {
+    TimeSystem::deleteTicker(uuid);
     join();
 }
 
@@ -93,7 +95,7 @@ void *ThreadPool::taskRoutine(void *arg) {
 }
 
 void ThreadPool::handleTimeOut(Event* e) {
-    ((ThreadPool*)e->arg)->decreasePoolSize();
+    ((ThreadPool*)((Time*)e->arg)->ePtr)->decreasePoolSize();
 }
 
 void ThreadPool::increasePoolSize() {

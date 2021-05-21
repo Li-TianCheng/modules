@@ -13,7 +13,7 @@
 #include "my_pthread/include/Thread.h"
 #include "time_system/include/TimeSystem.h"
 
-static const Time CheckTime(0, 0, 1, 0);
+static Time CheckTime(0, 0, 1, 0, nullptr);
 static const int MaxNum         = 5000;
 
 using std::list;
@@ -51,6 +51,7 @@ private:
         void* arg;
         TaskNode(void (*task)(void *), void* arg):task(task), arg(arg){};
     };
+    string uuid;
     Mutex mutex;
     std::atomic<int> runningNum;
     std::atomic<int> threadNum;
