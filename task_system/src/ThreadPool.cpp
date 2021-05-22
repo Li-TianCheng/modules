@@ -28,7 +28,7 @@ void ThreadPool::addTask(void (*task)(void *), void *arg) {
 void ThreadPool::cycleInit() {
     uuid = TimeSystem::receiveEvent(EventTicker, (Time *) &CheckTime);
     for(auto& thread : threadPool){
-        Input* arg = ObjPool::allocate<Input>(Input(this, &thread));
+        ThreadPoolEventArg* arg = ObjPool::allocate<ThreadPoolEventArg>(this, &thread);
         thread.run(taskRoutine, arg);
     }
 }
@@ -67,21 +67,21 @@ void ThreadPool::join() {
 }
 
 void ThreadPool::cleanHandler(void *arg) {
-    ((Input*)arg)->ptr->mutex.unlock();
-    ((Input*)arg)->ptr->threadNum--;
-    ObjPool::deallocate((Input*)arg);
+    ((ThreadPoolEventArg*)arg)->ptr->mutex.unlock();
+    ((ThreadPoolEventArg*)arg)->ptr->threadNum--;
+    ObjPool::deallocate((ThreadPoolEventArg*)arg);
 }
 
 void *ThreadPool::taskRoutine(void *arg) {
     pthread_cleanup_push(cleanHandler, arg);
-        ThreadPool* curr = ((Input*)arg)->ptr;
+        ThreadPool* curr = ((ThreadPoolEventArg*)arg)->ptr;
         while (true) {
             curr->mutex.lock();
             while (curr->shutdown == 2 || curr->taskQueue.empty()){
-                ((Input*)arg)->tPtr->isBlocking = true;
+                ((ThreadPoolEventArg*)arg)->tPtr->isBlocking = true;
                 curr->condition.wait(curr->mutex);
             }
-            ((Input*)arg)->tPtr->isBlocking = false;
+            ((ThreadPoolEventArg*)arg)->tPtr->isBlocking = false;
             TaskNode t = curr->taskQueue.front();
             curr->taskQueue.pop();
             curr->condition.notifyAll(curr->mutex);
@@ -105,7 +105,7 @@ void ThreadPool::increasePoolSize() {
     mutex.lock();
     for (int i = 0; i < initNum; i++){
         threadPool.emplace_back();
-        Input* arg = ObjPool::allocate<Input>(Input(this, &threadPool.back()));
+        ThreadPoolEventArg* arg = ObjPool::allocate<ThreadPoolEventArg>(this, &threadPool.back());
         threadPool.back().run(taskRoutine, arg);
         threadNum++;
     }

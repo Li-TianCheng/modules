@@ -23,7 +23,7 @@ public:
     ObjPool(ObjPool&&) = delete;
     void operator=(const ObjPool&) = delete;
     void operator=(ObjPool&&) = delete;
-private:
+public:
     static MemPool& getInstance();
 };
 

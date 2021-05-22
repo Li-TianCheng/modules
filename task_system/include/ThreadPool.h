@@ -63,10 +63,10 @@ private:
     queue<TaskNode> taskQueue;
 };
 
-struct Input{
+struct ThreadPoolEventArg{
     ThreadPool* ptr;
     _Thread* tPtr;
-    Input(ThreadPool* ptr, _Thread* tPtr): ptr(ptr), tPtr(tPtr){};
+    ThreadPoolEventArg(ThreadPool* ptr, _Thread* tPtr): ptr(ptr), tPtr(tPtr){};
 };
 
 #endif //TASKSYSTEM_THREADPOOL_H

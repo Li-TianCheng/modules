@@ -23,7 +23,7 @@ struct Time{
     string uuid;
     EventSystem* ePtr;
     TimeWheel* tPtr = nullptr;
-    Time(int h, int m, int s, int ms, EventSystem* ePtr): ms(ms), s(s), m(m), h(h), ePtr(ePtr){
+    Time(int h, int m, int s, int ms, EventSystem* ePtr): h(h), m(m), s(s), ms(ms), ePtr(ePtr){
         uuid_t uu;
         uuid_generate_time(uu);
         uuid = (char*)uu;
@@ -40,6 +40,7 @@ public:
     TimeWheel& operator=(TimeWheel&&) = delete;
 private:
     void init();
+    void addTimeToWheel(EventKey e, Time* t);
     unordered_set<string> toDelete;
     vector<queue<Event*>> millisecond;
     vector<queue<Event*>> second;
@@ -54,6 +55,12 @@ private:
     static void handleTimerTimeOut(Event* e);
     static void handleTickerTimeOut(Event* e);
     static void handleTimeOut(Event* e);
+};
+
+struct TimeWheelEventArg {
+    Time* t;
+    Time* nextTime;
+    TimeWheelEventArg(Time* t, Time* nextTime): t(t), nextTime(nextTime) {};
 };
 
 #endif //TIMESYSTEM_TIMEWHEEL_H
