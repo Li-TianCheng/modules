@@ -33,6 +33,7 @@ struct Time{
 class TimeWheel: public EventSystem {
 public:
     TimeWheel();
+    ~TimeWheel() override;
     void deleteTicker(const string& uuid);
     TimeWheel(const TimeWheel&) = delete;
     TimeWheel(TimeWheel&&) = delete;
@@ -50,11 +51,11 @@ private:
     int sIter;
     int mIter;
     int hIter;
-    static void handleTimerEvent(Event* e);
-    static void handleTickerEvent(Event* e);
-    static void handleTimerTimeOut(Event* e);
-    static void handleTickerTimeOut(Event* e);
-    static void handleTimeOut(Event* e);
+    static void handleTimerEvent(void* arg);
+    static void handleTickerEvent(void* arg);
+    static void handleTimerTimeOut(void* arg);
+    static void handleTickerTimeOut(void* arg);
+    static void handleTimeOut(void* arg);
 };
 
 struct TimeWheelEventArg {

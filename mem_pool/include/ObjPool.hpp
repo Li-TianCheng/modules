@@ -7,7 +7,7 @@
 
 #include "MemPool.h"
 
-static const int ChunkSize      = 100;
+static const int ChunkSize      = 200;
 
 class ObjPool{
 public:
@@ -23,7 +23,7 @@ public:
     ObjPool(ObjPool&&) = delete;
     void operator=(const ObjPool&) = delete;
     void operator=(ObjPool&&) = delete;
-public:
+private:
     static MemPool& getInstance();
 };
 

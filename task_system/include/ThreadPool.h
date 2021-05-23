@@ -34,7 +34,7 @@ public:
     ThreadPool(ThreadPool&&) = delete;
     void operator=(const ThreadPool&) = delete;
     void operator=(ThreadPool&&) = delete;
-    ~ThreadPool();
+    ~ThreadPool() override;
 private:
     void increasePoolSize();
     void decreasePoolSize();
@@ -43,8 +43,8 @@ private:
     void join();
     static void cleanHandler(void* arg);
     static void* taskRoutine(void* arg);
-    static void handleTimeOut(Event* e);
-    static void handleIncreasePool(Event* e);
+    static void handleTimeOut(void* arg);
+    static void handleIncreasePool(void* arg);
 private:
     struct TaskNode{
         void (*task)(void *);

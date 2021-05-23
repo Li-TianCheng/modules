@@ -26,8 +26,8 @@ struct Event{
 
 class EventSystem {
 public:
-    EventSystem() = default;
-    void registerEvent(EventKey eventType, void (*handleEvent)(Event*));
+    EventSystem();
+    void registerEvent(EventKey eventType, void (*handleEvent)(void*));
     void unregisterEvent(EventKey eventType);
     void receiveEvent(Event* e);
     void doEvent(Event* e);
@@ -35,12 +35,14 @@ public:
     void cycle();
     virtual void cycleInit();
     virtual void cycleClear();
+    virtual ~EventSystem();
     EventSystem(const EventSystem &) = delete;
     EventSystem(EventSystem&&) = delete;
     EventSystem& operator=(const EventSystem&) = delete;
     EventSystem& operator=(EventSystem&&) = delete;
 private:
-    unordered_map<EventKey, void(*)(Event*)> map;
+    volatile bool shutdown;
+    unordered_map<EventKey, void(*)(void*)> map;
     queue<Event*> eventQueue;
     Mutex mutex;
     Condition condition;

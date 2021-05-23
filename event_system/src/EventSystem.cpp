@@ -4,7 +4,7 @@
 
 #include "EventSystem.h"
 
-void EventSystem::registerEvent(EventKey eventType, void (*handleEvent)(Event*)) {
+void EventSystem::registerEvent(EventKey eventType, void (*handleEvent)(void*)) {
     map[eventType] = handleEvent;
 }
 
@@ -13,14 +13,22 @@ void EventSystem::unregisterEvent(EventKey eventType) {
 }
 
 void EventSystem::receiveEvent(Event* e) {
+    if (shutdown){
+        return;
+    }
     mutex.lock();
     eventQueue.push(e);
     condition.notifyAll(mutex);
 }
 
 void EventSystem::doEvent(Event* e) {
+    if (e == nullptr){
+        return;
+    }
     if (map.find(e->eventType) != map.end()){
-        map[e->eventType](e);
+        if (map[e->eventType] != nullptr){
+            map[e->eventType](e->arg);
+        }
     }
     ObjPool::deallocate(e);
 }
@@ -40,17 +48,27 @@ void EventSystem::cycle() {
     cycleInit();
     while (true) {
         Event* e = getEvent();
-        if (e != nullptr){
-            if (e->eventType == EventEndCycle){
-                break;
-            }
+        if (e->eventType == EventEndCycle){
             doEvent(e);
+            break;
         }
+        doEvent(e);
     }
+    shutdown = true;
     cycleClear();
 }
 
 void EventSystem::cycleInit() {}
 
 void EventSystem::cycleClear() {}
+
+EventSystem::~EventSystem() {
+    while (!eventQueue.empty()){
+        Event* e = eventQueue.front();
+        ObjPool::deallocate(e);
+        eventQueue.pop();
+    }
+}
+
+EventSystem::EventSystem() : shutdown(false) {}
 

@@ -94,8 +94,8 @@ void *ThreadPool::taskRoutine(void *arg) {
     pthread_cleanup_pop(0);
 }
 
-void ThreadPool::handleTimeOut(Event* e) {
-    ((ThreadPool*)((Time*)e->arg)->ePtr)->decreasePoolSize();
+void ThreadPool::handleTimeOut(void* arg) {
+    ((ThreadPool*)((Time*)arg)->ePtr)->decreasePoolSize();
 }
 
 void ThreadPool::increasePoolSize() {
@@ -134,6 +134,6 @@ void ThreadPool::decreasePoolSize() {
     mutex.unlock();
 }
 
-void ThreadPool::handleIncreasePool(Event *e) {
-    ((ThreadPool*)e->arg)->increasePoolSize();
+void ThreadPool::handleIncreasePool(void *arg) {
+    ((ThreadPool*)arg)->increasePoolSize();
 }
