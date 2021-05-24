@@ -13,11 +13,7 @@
 #include <strings.h>
 #include "mem_pool/include/ObjPool.hpp"
 #include "task_system/include/TaskSystem.h"
-
-enum AddressType {
-    IPV4 = PF_INET,
-    IPV6 = PF_INET6
-};
+#include "AddressType.h"
 
 class TcpListener;
 
@@ -37,12 +33,12 @@ public:
     TcpListener(int port, AddressType addressType);
     void listen();
     void close();
-    ~TcpListener();
+    virtual ~TcpListener();
 private:
     static void listenTask(void* arg);
     static void handleConnectTask(void* arg);
     void unregisterConnection(int clientFd);
-    virtual void handleInput(char* buff, int recvNum) = 0;
+    virtual void handleDoTask(ClientInfo* clientInfo) = 0;
 private:
     ClientInfo* accept();
     volatile bool isClose;

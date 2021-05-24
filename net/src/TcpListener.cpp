@@ -7,7 +7,7 @@
 TcpListener::TcpListener(int port, AddressType addressType): isClose(false) {
     serverFd = socket(addressType, SOCK_STREAM, 0);
     bzero(&serverAddress, sizeof(serverAddress));
-    if (addressType == IPV4){
+    if (addressType == IPV4) {
         ((sockaddr_in*)(&serverAddress))->sin_family = PF_INET;
         ((sockaddr_in*)(&serverAddress))->sin_port = htons(port);
     }else {
@@ -74,19 +74,14 @@ void TcpListener::listenTask(void *arg) {
 
 void TcpListener::handleConnectTask(void *arg) {
     ClientInfo* clientInfo = (ClientInfo*)arg;
-    char buff[1024];
-    while (true) {
-        int recvNum = recv(clientInfo->clientFd, buff, sizeof(buff), 0);
-        if (recvNum == 0){
-            break;
-        }
-        clientInfo->listener->handleInput(buff, recvNum);
-    }
+    clientInfo->listener->handleDoTask(clientInfo);
     clientInfo->listener->unregisterConnection(clientInfo->clientFd);
 }
 
 void TcpListener::close() {
-    isClose = true;
-    ::shutdown(serverFd, SHUT_RD) ;
-    ::close(serverFd);
+    if (!isClose){
+        isClose = true;
+        ::shutdown(serverFd, SHUT_RD) ;
+        ::close(serverFd);
+    }
 }
