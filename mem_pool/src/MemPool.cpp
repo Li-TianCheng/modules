@@ -6,7 +6,7 @@
 
 MemPool::MemPool(int num):mutex(126), num(num){
     for (int i = 0; i < 127; i++){
-        mem.emplace_back(8+i*4);
+        mem.emplace_back(8+i*4, num);
     }
 }
 
@@ -33,8 +33,13 @@ void MemPool::deallocate(void *ptr, size_t size) {
 }
 
 MemPool::~MemPool() {
+    bool flag = false;
     for (auto* ptr : smallObj){
+        flag = true;
         ::operator delete(ptr);
+    }
+    if (flag) {
+        std::cerr << "内存泄漏:小于8byte或大于512byte" << std::endl;
     }
 }
 

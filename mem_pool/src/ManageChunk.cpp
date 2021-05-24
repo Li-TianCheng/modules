@@ -5,7 +5,7 @@
 #include "ManageChunk.h"
 #include <stdexcept>
 
-ManageChunk::ManageChunk(size_t size):size(size), head(nullptr), free(nullptr){}
+ManageChunk::ManageChunk(size_t size, int num):size(size), num(num), head(nullptr), free(nullptr){}
 
 void* ManageChunk::allocate(int num) {
     if (head == nullptr) {
@@ -83,9 +83,14 @@ void ManageChunk::deallocate(void* ptr, int num) {
 }
 
 ManageChunk::~ManageChunk() {
+    int count = 0;
     while (head != nullptr){
+        count += num - head->num;
         MemChunk* temp = head;
         head = head->next;
         delete temp;
+    }
+    if (count != 0) {
+        std::cerr << "内存泄漏:" << count << "个" << size << "byte" << std::endl;
     }
 }
