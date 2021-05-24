@@ -13,6 +13,7 @@
 #include <stdexcept>
 #include <unistd.h>
 #include "utils/include/StringUtils.h"
+#include "BufferIo.h"
 #include "AddressType.h"
 
 using std::string;
@@ -22,11 +23,11 @@ class TcpClient {
 public:
     TcpClient(const string& address, AddressType addressType);
     void connect();
-    void write(const string& context, int length=1024);
+    void write(const string& context);
     void close();
     string read();
 private:
-    char readBuff[1024];
+    BufferIo bufferIo;
     int clientFd;
     sockaddr serverAddress;
 };

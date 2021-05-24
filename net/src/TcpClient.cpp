@@ -27,19 +27,12 @@ void TcpClient::connect() {
     }
 }
 
-void TcpClient::write(const string &context, int length) {
-    int idx = 0;
-    while (idx < context.length()) {
-        send(clientFd, context.substr(idx, length).data(), context.size(), 0);
-        idx += length;
-    }
+void TcpClient::write(const string &context) {
+    bufferIo.write(clientFd, context);
 }
 
 string TcpClient::read() {
-    int recvNum = recv(clientFd, readBuff, sizeof(readBuff), 0);
-    string context = readBuff;
-    context.resize(recvNum);
-    return context;
+    return bufferIo.read(clientFd);
 }
 
 void TcpClient::close() {
