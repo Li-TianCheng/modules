@@ -22,7 +22,7 @@ class TcpClient {
 public:
     TcpClient(const string& address, AddressType addressType);
     void connect();
-    void write(const string& context);
+    void write(const string& context, int length=1024);
     void close();
     string read();
 private:

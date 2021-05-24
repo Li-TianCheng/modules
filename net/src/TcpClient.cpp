@@ -27,8 +27,12 @@ void TcpClient::connect() {
     }
 }
 
-void TcpClient::write(const string &context) {
-    send(clientFd, context.data(), context.size(), 0);
+void TcpClient::write(const string &context, int length) {
+    int idx = 0;
+    while (idx < context.length()) {
+        send(clientFd, context.substr(idx, length).data(), context.size(), 0);
+        idx += length;
+    }
 }
 
 string TcpClient::read() {
