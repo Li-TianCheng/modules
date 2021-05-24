@@ -13,8 +13,10 @@ add_subdirectory(task_system)
 
 add_subdirectory(my_pthread)
 
+add_subdirectory(utils)
+
 add_subdirectory(net)
 
 add_library(Modules Modules.h)
 
-target_link_libraries(Modules Net TaskSystem TimeSystem EventSystem MemPool MyPthread)
+target_link_libraries(Modules Net TaskSystem TimeSystem EventSystem MemPool MyPthread Utils)

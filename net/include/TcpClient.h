@@ -12,7 +12,7 @@
 #include <arpa/inet.h>
 #include <stdexcept>
 #include <unistd.h>
-#include "include/StringUtils.h"
+#include "utils/include/StringUtils.h"
 #include "AddressType.h"
 
 using std::string;
