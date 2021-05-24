@@ -4,7 +4,7 @@
 
 #include "TcpListener.h"
 
-TcpListener::TcpListener(int port, AddressType addressType) {
+TcpListener::TcpListener(int port, AddressType addressType): isClose(false) {
     serverFd = socket(addressType, SOCK_STREAM, 0);
     bzero(&serverAddress, sizeof(serverAddress));
     if (addressType == IPV4){
@@ -17,26 +17,76 @@ TcpListener::TcpListener(int port, AddressType addressType) {
     }
     int err = bind(serverFd, &serverAddress, sizeof(serverAddress));
     if (err == -1){
-        close(serverFd);
+        ::close(serverFd);
         throw std::runtime_error("listener创建失败");
     }
 }
 
 TcpListener::~TcpListener() {
-    close(serverFd);
+    if (!isClose){
+        ::close(serverFd);
+    }
+    while (!clientSet.empty()){}
 }
 
 void TcpListener::listen() {
     int err = ::listen(serverFd, 5);
     if (err == -1){
-        close(serverFd);
+        ::close(serverFd);
         throw std::runtime_error("监听失败");
+    }
+    TaskSystem::addTask(listenTask, this);
+}
+
+ClientInfo* TcpListener::accept() {
+    ClientInfo* clientInfo = ObjPool::allocate<ClientInfo>();
+    int clientFd = ::accept(serverFd, &clientInfo->clientAddress, &clientInfo->len);
+    clientInfo->clientFd = clientFd;
+    clientInfo->listener = this;
+    if (clientFd != -1){
+        clientSet[clientFd] = clientInfo;
+    }
+    return clientInfo;
+}
+
+void TcpListener::unregisterConnection(int clientFd) {
+    if (clientSet.find(clientFd) != clientSet.end()) {
+        ::close(clientFd);
+        ClientInfo* clientInfo = clientSet[clientFd];
+        clientSet.erase(clientFd);
+        ObjPool::deallocate(clientInfo);
     }
 }
 
-int TcpListener::accept() {
-    ClientInfo* clientInfo = ObjPool::allocate<ClientInfo>();
-    int clientFd = ::accept(serverFd, &clientInfo->clientAddress, &clientInfo->len);
-    clientSet[clientFd] = clientInfo;
-    return clientFd;
+void TcpListener::listenTask(void *arg) {
+    while (true) {
+        ClientInfo* clientInfo = ((TcpListener*)arg)->accept();
+        if (clientInfo->clientFd == -1){
+            ObjPool::deallocate(clientInfo);
+            if (clientInfo->listener->isClose){
+                break;
+            }
+        } else{
+            TaskSystem::addTask(handleConnectTask, clientInfo);
+        }
+    }
+}
+
+void TcpListener::handleConnectTask(void *arg) {
+    ClientInfo* clientInfo = (ClientInfo*)arg;
+    char buff[1024];
+    while (true) {
+        int recvNum = recv(clientInfo->clientFd, buff, sizeof(buff), 0);
+        if (recvNum == 0){
+            break;
+        }
+        clientInfo->listener->handleInput(buff, recvNum);
+    }
+    clientInfo->listener->unregisterConnection(clientInfo->clientFd);
+}
+
+void TcpListener::close() {
+    isClose = true;
+    ::shutdown(serverFd, SHUT_RD) ;
+    ::close(serverFd);
 }
