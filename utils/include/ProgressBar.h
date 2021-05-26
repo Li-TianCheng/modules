@@ -14,7 +14,6 @@
 
 using namespace std;
 
-static Time UpdateTime(0, 0, 0, 500, nullptr);
 
 class ProgressBar : public EventSystem{
 public:
@@ -29,6 +28,7 @@ private:
     static void handleTimeOut(void* arg);
     void draw();
 private:
+    Time updateTime;
     Time curr;
     string title;
     atomic<int> count;

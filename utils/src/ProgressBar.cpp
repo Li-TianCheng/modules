@@ -4,8 +4,8 @@
 
 #include "ProgressBar.h"
 
-ProgressBar::ProgressBar(const string &title, int num) :curr(0,0,0,0,nullptr), title(title), num(num), count(0) {
-    UpdateTime.ePtr = this;
+ProgressBar::ProgressBar(const string &title, int num) :curr(0,0,0,0,nullptr),
+    title(title), num(num), count(0), updateTime(0,0,0,500,this) {
     init();
 }
 
@@ -14,7 +14,9 @@ void ProgressBar::start() {
 }
 
 void ProgressBar::done() {
-    if (count < num) {
+    if (count >= num) {
+        draw();
+    } else {
         count++;
     }
 }
@@ -29,12 +31,13 @@ void ProgressBar::handleTimeOut(void* arg) {
 }
 
 void ProgressBar::stop() {
+    cout << endl;
     Event* e = ObjPool::allocate<Event>(EventEndCycle, nullptr);
     receiveEvent(e);
 }
 
 void ProgressBar::cycleInit() {
-    uuid = TimeSystem::receiveEvent(EventTicker, &UpdateTime);
+    uuid = TimeSystem::receiveEvent(EventTicker, &updateTime);
     for (int i = 0; i < 60-title.size(); i++){
         cout << " ";
     }
@@ -47,7 +50,7 @@ void ProgressBar::cycleClear() {
 }
 
 void ProgressBar::draw() {
-    curr += UpdateTime;
+    curr += updateTime;
     cout << "\r";
     cout << "[" << count << "/" << num;
     cout << "|" << fixed << setprecision(2) << double(count)/num*100 << "%]";
