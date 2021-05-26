@@ -64,39 +64,39 @@ void TimeWheel::handleTimeOut(void *arg) {
         tw->doEvent(e);
         tw->millisecond[tw->msIter].pop();
     }
-    tw->msIter = tw->msIter+1;
+    tw->msIter++;
     if (tw->msIter == 1000){
         tw->msIter = 0;
         tw->sIter = tw->sIter+1;
+        if (tw->sIter == 60){
+            tw->sIter = 0;
+            tw->mIter = tw->mIter+1;
+            if (tw->mIter == 60){
+                tw->mIter = 0;
+                tw->hIter = tw->hIter+1;
+                if (tw->hIter == 24){
+                    tw->hIter = 0;
+                }
+                while(!tw->hour[tw->hIter].empty()){
+                    Event* e = tw->hour[tw->hIter].front();
+                    TimeWheelEventArg* arg = (TimeWheelEventArg*)e->arg;
+                    tw->minute[arg->nextTime->m].push(e);
+                    tw->hour[tw->hIter].pop();
+                }
+            }
+            while(!tw->minute[tw->mIter].empty()){
+                Event* e = tw->minute[tw->mIter].front();
+                TimeWheelEventArg* arg = (TimeWheelEventArg*)e->arg;
+                tw->second[arg->nextTime->s].push(e);
+                tw->minute[tw->mIter].pop();
+            }
+        }
         while(!tw->second[tw->sIter].empty()){
             Event* e = tw->second[tw->sIter].front();
             TimeWheelEventArg* arg = (TimeWheelEventArg*)e->arg;
             tw->millisecond[arg->nextTime->ms].push(e);
             tw->second[tw->sIter].pop();
         }
-    }
-    if (tw->sIter == 60){
-        tw->sIter = 0;
-        tw->mIter = tw->mIter+1;
-        while(!tw->minute[tw->mIter].empty()){
-            Event* e = tw->minute[tw->mIter].front();
-            TimeWheelEventArg* arg = (TimeWheelEventArg*)e->arg;
-            tw->millisecond[arg->nextTime->s].push(e);
-            tw->minute[tw->mIter].pop();
-        }
-    }
-    if (tw->mIter == 60){
-        tw->mIter = 0;
-        tw->hIter = tw->hIter+1;
-        while(!tw->hour[tw->hIter].empty()){
-            Event* e = tw->hour[tw->hIter].front();
-            TimeWheelEventArg* arg = (TimeWheelEventArg*)e->arg;
-            tw->millisecond[arg->nextTime->m].push(e);
-            tw->hour[tw->hIter].pop();
-        }
-    }
-    if (tw->hIter == 24){
-        tw->hIter= 0;
     }
 }
 
@@ -115,19 +115,19 @@ void TimeWheel::addTimeToWheel(EventKey e, Time *t) {
     nextTime->h %= 24;
     TimeWheelEventArg* arg = ObjPool::allocate<TimeWheelEventArg>(t, nextTime);
     Event* _e = ObjPool::allocate<Event>(e, arg);
-    if (t->h != 0){
+    if (nextTime->h != hIter){
         hour[nextTime->h].push(_e);
         return;
     }
-    if (t->m != 0){
+    if (nextTime->m != mIter){
         minute[nextTime->m].push(_e);
         return;
     }
-    if (t->s != 0){
+    if (nextTime->s != sIter){
         second[nextTime->s].push(_e);
         return;
     }
-    if (t->ms != 0){
+    if (nextTime->ms != msIter){
         millisecond[nextTime->ms].push(_e);
         return;
     }

@@ -14,7 +14,7 @@ string BufferIo::read(int socketFd) {
 void BufferIo::write(int socketFd, const string& context) {
     int idx = 0;
     while (idx < context.length()) {
-        send(socketFd, context.substr(idx, writeBufferSize).data(), context.size(), 0);
-        idx += writeBufferSize;
+        send(socketFd, context.substr(idx, WriteBufferSize).data(), context.size(), 0);
+        idx += WriteBufferSize;
     }
 }

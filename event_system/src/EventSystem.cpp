@@ -72,3 +72,7 @@ EventSystem::~EventSystem() {
 
 EventSystem::EventSystem() : shutdown(false) {}
 
+void EventSystem::cycleTask(void *arg) {
+    ((EventSystem*)arg)->cycle();
+}
+

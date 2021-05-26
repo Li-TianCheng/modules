@@ -33,6 +33,7 @@ public:
     void doEvent(Event* e);
     Event* getEvent();
     void cycle();
+    static void cycleTask(void* arg);
     virtual void cycleInit();
     virtual void cycleClear();
     virtual ~EventSystem();

@@ -28,6 +28,20 @@ struct Time{
         uuid_generate_time(uu);
         uuid = (char*)uu;
     };
+    Time& operator+=(const Time& t) {
+        ms += t.ms;
+        s += t.s;
+        m += t.m;
+        h += t.h;
+        s += ms / 1000;
+        m += s / 60;
+        h += m / 60;
+        ms %= 1000;
+        s %= 60;
+        m %= 60;
+        h %= 24;
+        return *this;
+    }
 };
 
 class TimeWheel: public EventSystem {
