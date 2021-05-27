@@ -14,7 +14,7 @@
 #include "time_system/include/TimeSystem.h"
 
 static Time CheckTime(0, 0, 1, 0, nullptr);
-static const int MaxNum         = 5000;
+static const int MaxNum         = 1000;
 
 using std::list;
 

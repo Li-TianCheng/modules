@@ -45,6 +45,7 @@ private:
     std::unordered_map<int, ClientInfo*> clientSet;
     sockaddr serverAddress;
     int serverFd;
+    Mutex mutex;
 };
 
 #endif //NET_TCPLISTENER_H

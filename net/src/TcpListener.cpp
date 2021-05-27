@@ -30,7 +30,7 @@ TcpListener::~TcpListener() {
 }
 
 void TcpListener::listen() {
-    int err = ::listen(serverFd, 5);
+    int err = ::listen(serverFd, 5000);
     if (err == -1){
         ::close(serverFd);
         throw std::runtime_error("监听失败");
@@ -44,18 +44,22 @@ ClientInfo* TcpListener::accept() {
     clientInfo->clientFd = clientFd;
     clientInfo->listener = this;
     if (clientFd != -1){
+        mutex.lock();
         clientSet[clientFd] = clientInfo;
+        mutex.unlock();
     }
     return clientInfo;
 }
 
 void TcpListener::unregisterConnection(int clientFd) {
+    mutex.lock();
     if (clientSet.find(clientFd) != clientSet.end()) {
         ::close(clientFd);
         ClientInfo* clientInfo = clientSet[clientFd];
         clientSet.erase(clientFd);
         ObjPool::deallocate(clientInfo);
     }
+    mutex.unlock();
 }
 
 void TcpListener::listenTask(void *arg) {
