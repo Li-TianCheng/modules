@@ -18,7 +18,7 @@ public:
     void operator=(const Latch&) = delete;
     void operator=(Latch&&) = delete;
 private:
-    int count;
+    volatile int count;
     Mutex mutex;
     Condition condition;
 };
