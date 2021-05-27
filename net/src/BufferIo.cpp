@@ -6,6 +6,9 @@
 
 string BufferIo::read(int socketFd) {
     int recvNum = recv(socketFd, readBuffer, sizeof(readBuffer), 0);
+    if (recvNum == 0) {
+        return "";
+    }
     string context = readBuffer;
     context.resize(recvNum);
     return context;
@@ -14,7 +17,11 @@ string BufferIo::read(int socketFd) {
 void BufferIo::write(int socketFd, const string& context) {
     int idx = 0;
     while (idx < context.length()) {
-        send(socketFd, context.substr(idx, WriteBufferSize).data(), context.size(), 0);
-        idx += WriteBufferSize;
+        int sendNum = send(socketFd, context.substr(idx, WriteBufferSize).c_str(),
+                           context.substr(idx, WriteBufferSize).size(), 0);
+        if (sendNum < 0) {
+            return;
+        }
+        idx += sendNum;
     }
 }
