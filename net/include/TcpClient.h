@@ -13,11 +13,12 @@
 #include <stdexcept>
 #include <unistd.h>
 #include "utils/include/StringUtils.h"
-#include "BufferIo.h"
 #include "AddressType.h"
 
 using std::string;
 using std::vector;
+
+static const int ReadBufferSize = 256;
 
 class TcpClient {
 public:
@@ -27,9 +28,9 @@ public:
     void close();
     string read();
 private:
-    BufferIo bufferIo;
     int clientFd;
     sockaddr serverAddress;
+    char buffer[ReadBufferSize];
 };
 
 

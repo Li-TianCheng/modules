@@ -19,8 +19,8 @@ public:
     void* getResult() const;
     Thread(const Thread&) = delete;
     Thread(Thread&&) = delete;
-    void operator=(const Thread&) = delete;
-    void operator=(Thread&&) = delete;
+    Thread& operator=(const Thread&) = delete;
+    Thread& operator=(Thread&&) = delete;
 private:
     bool isRunning;
     pthread_t threadID;

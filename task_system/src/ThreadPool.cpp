@@ -6,7 +6,6 @@
 
 ThreadPool::ThreadPool(int initNum, int queueSize): initNum(initNum), queueSize(queueSize), threadNum(initNum),
                                                     runningNum(0), shutdown(0), threadPool(initNum) {
-    CheckTime.ePtr = this;
     init();
 }
 
@@ -26,7 +25,8 @@ void ThreadPool::addTask(void (*task)(void *), void *arg) {
 }
 
 void ThreadPool::cycleInit() {
-    uuid = TimeSystem::receiveEvent(EventTicker, (Time *) &CheckTime);
+    Time* t = ObjPool::allocate<Time>(0, 0, 1, 0, this);
+    uuid = TimeSystem::receiveEvent(EventTicker, t);
     for(auto& thread : threadPool){
         ThreadPoolEventArg* arg = ObjPool::allocate<ThreadPoolEventArg>(this, &thread);
         thread.run(taskRoutine, arg);
@@ -103,7 +103,7 @@ void ThreadPool::increasePoolSize() {
         return;
     }
     mutex.lock();
-    for (int i = 0; i < initNum; i++){
+    for (int i = 0; i < initNum/3; i++){
         threadPool.emplace_back();
         ThreadPoolEventArg* arg = ObjPool::allocate<ThreadPoolEventArg>(this, &threadPool.back());
         threadPool.back().run(taskRoutine, arg);
@@ -117,7 +117,7 @@ void ThreadPool::decreasePoolSize() {
         return;
     }
     mutex.lock();
-    int target = threadNum-std::max(threadNum-initNum, initNum);
+    int target = threadNum-std::max(threadNum-initNum/3, initNum);
     for (auto it = threadPool.begin(); it != threadPool.end();){
         if (target == 0){
             break;

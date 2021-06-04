@@ -15,8 +15,8 @@ public:
     void wait();
     Latch(const Latch&) = delete;
     Latch(Latch&&) = delete;
-    void operator=(const Latch&) = delete;
-    void operator=(Latch&&) = delete;
+    Latch& operator=(const Latch&) = delete;
+    Latch& operator=(Latch&&) = delete;
 private:
     volatile int count;
     Mutex mutex;

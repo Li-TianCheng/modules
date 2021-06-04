@@ -28,11 +28,24 @@ void TcpClient::connect() {
 }
 
 void TcpClient::write(const string &context) {
-    bufferIo.write(clientFd, context);
+    send(clientFd, context.data(), context.size(), 0);
 }
 
 string TcpClient::read() {
-    return bufferIo.read(clientFd);
+    string readMsg;
+    while (true) {
+        int recvNum = recv(clientFd, buffer, sizeof(buffer), MSG_DONTWAIT);
+        if (recvNum <= 0) {
+            if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
+                break;
+            }
+            return "";
+        }
+        string temp = buffer;
+        temp.resize(recvNum);
+        readMsg += temp;
+    }
+    return readMsg;
 }
 
 void TcpClient::close() {

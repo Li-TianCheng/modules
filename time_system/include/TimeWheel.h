@@ -6,43 +6,12 @@
 #define TIMESYSTEM_TIMEWHEEL_H
 
 #include <vector>
-#include <uuid/uuid.h>
 #include <unordered_set>
 #include "event_system/include/EventSystem.h"
+#include "Time.h"
 
 using std::vector;
 using std::unordered_set;
-
-class TimeWheel;
-
-struct Time{
-    int ms;
-    int s;
-    int m;
-    int h;
-    string uuid;
-    EventSystem* ePtr;
-    TimeWheel* tPtr = nullptr;
-    Time(int h, int m, int s, int ms, EventSystem* ePtr): h(h), m(m), s(s), ms(ms), ePtr(ePtr){
-        uuid_t uu;
-        uuid_generate_time(uu);
-        uuid = (char*)uu;
-    };
-    Time& operator+=(const Time& t) {
-        ms += t.ms;
-        s += t.s;
-        m += t.m;
-        h += t.h;
-        s += ms / 1000;
-        m += s / 60;
-        h += m / 60;
-        ms %= 1000;
-        s %= 60;
-        m %= 60;
-        h %= 24;
-        return *this;
-    }
-};
 
 class TimeWheel: public EventSystem {
 public:
@@ -70,6 +39,7 @@ private:
     static void handleTimerTimeOut(void* arg);
     static void handleTickerTimeOut(void* arg);
     static void handleTimeOut(void* arg);
+    Mutex mutex;
 };
 
 struct TimeWheelEventArg {

@@ -21,8 +21,8 @@ public:
     ~MemPool();
     MemPool(const MemPool&) = delete;
     MemPool(MemPool&&) = delete;
-    void operator=(const MemPool&) = delete;
-    void operator=(MemPool&&) = delete;
+    MemPool& operator=(const MemPool&) = delete;
+    MemPool& operator=(MemPool&&) = delete;
 private:
     std::unordered_set<void*> smallObj;
     vector<ManageChunk> mem;

@@ -17,8 +17,8 @@ public:
     ~Condition();
     Condition(const Condition&) = delete;
     Condition(Condition&&) = delete;
-    void operator=(const Condition&) = delete;
-    void operator=(Condition&&) = delete;
+    Condition& operator=(const Condition&) = delete;
+    Condition& operator=(Condition&&) = delete;
 private:
     pthread_cond_t condition;
 };

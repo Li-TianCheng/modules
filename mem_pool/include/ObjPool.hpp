@@ -21,8 +21,8 @@ public:
     ObjPool() = delete;
     ObjPool(const ObjPool&) = delete;
     ObjPool(ObjPool&&) = delete;
-    void operator=(const ObjPool&) = delete;
-    void operator=(ObjPool&&) = delete;
+    ObjPool& operator=(const ObjPool&) = delete;
+    ObjPool& operator=(ObjPool&&) = delete;
 private:
     static MemPool& getInstance();
 };

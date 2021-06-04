@@ -12,7 +12,9 @@ enum EventKey{
     EventTicker,
     EventTimerTimeOut,
     EventTickerTimeOut,
-    EventIncreasePool
+    EventIncreasePool,
+    EventCloseConnection,
+    EventCloseListen
 };
 
 

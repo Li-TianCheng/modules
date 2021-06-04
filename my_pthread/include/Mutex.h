@@ -16,8 +16,8 @@ public:
     ~Mutex();
     Mutex(const Mutex&) = delete;
     Mutex(Mutex&&) = delete;
-    void operator=(const Mutex&) = delete;
-    void operator=(Mutex&&) = delete;
+    Mutex& operator=(const Mutex&) = delete;
+    Mutex& operator=(Mutex&&) = delete;
 private:
     friend class Condition;
     pthread_mutex_t mutex;

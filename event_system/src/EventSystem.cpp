@@ -14,6 +14,7 @@ void EventSystem::unregisterEvent(EventKey eventType) {
 
 void EventSystem::receiveEvent(Event* e) {
     if (shutdown){
+        ObjPool::deallocate(e);
         return;
     }
     mutex.lock();
@@ -74,5 +75,28 @@ EventSystem::EventSystem() : shutdown(false) {}
 
 void EventSystem::cycleTask(void *arg) {
     ((EventSystem*)arg)->cycle();
+}
+
+void EventSystem::cycleNoBlock() {
+    if (shutdown || eventQueue.empty()) {
+        return;
+    }
+    mutex.lock();
+    vector<Event*> temp;
+    while (!eventQueue.empty()) {
+        Event* e = eventQueue.front();
+        temp.push_back(e);
+        eventQueue.pop();
+    }
+    mutex.unlock();
+    for (auto& e : temp) {
+        if (e->eventType == EventEndCycle){
+            doEvent(e);
+            shutdown = true;
+            cycleClear();
+            return;
+        }
+        doEvent(e);
+    }
 }
 

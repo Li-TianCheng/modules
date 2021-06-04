@@ -16,8 +16,8 @@ public:
     ~SpinLock();
     SpinLock(const SpinLock&) = delete;
     SpinLock(SpinLock&&) = delete;
-    void operator=(const SpinLock&) = delete;
-    void operator=(SpinLock&&) = delete;
+    SpinLock& operator=(const SpinLock&) = delete;
+    SpinLock& operator=(SpinLock&&) = delete;
 private:
     pthread_spinlock_t spinLock;
 };

@@ -18,8 +18,8 @@ public:
     ~RwLock();
     RwLock(const RwLock&) = delete;
     RwLock(RwLock&&) = delete;
-    void operator=(const RwLock&) = delete;
-    void operator=(RwLock&&) = delete;
+    RwLock& operator=(const RwLock&) = delete;
+    RwLock& operator=(RwLock&&) = delete;
 private:
     pthread_rwlock_t  rwLock;
 };

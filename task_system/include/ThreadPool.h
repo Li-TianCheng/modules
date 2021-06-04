@@ -13,8 +13,7 @@
 #include "my_pthread/include/Thread.h"
 #include "time_system/include/TimeSystem.h"
 
-static Time CheckTime(0, 0, 1, 0, nullptr);
-static const int MaxNum         = 1000;
+static const int MaxNum         = 20;
 
 using std::list;
 
@@ -32,8 +31,8 @@ public:
     void cycleClear() override;
     ThreadPool(const ThreadPool&) = delete;
     ThreadPool(ThreadPool&&) = delete;
-    void operator=(const ThreadPool&) = delete;
-    void operator=(ThreadPool&&) = delete;
+    ThreadPool& operator=(const ThreadPool&) = delete;
+    ThreadPool& operator=(ThreadPool&&) = delete;
     ~ThreadPool() override;
 private:
     void increasePoolSize();

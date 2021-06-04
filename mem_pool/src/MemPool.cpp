@@ -12,7 +12,10 @@ MemPool::MemPool(int num):mutex(126), num(num){
 
 void* MemPool::allocate(size_t size) {
     if (size < 8 || size > 512){
-        void* ptr = ::operator new(size);
+        void* ptr = ::malloc(size);
+        if (ptr == nullptr) {
+            throw std::runtime_error("内存分配错误");
+        }
         smallObj.insert(ptr);
         return ptr;
     }
@@ -24,8 +27,11 @@ void* MemPool::allocate(size_t size) {
 
 void MemPool::deallocate(void *ptr, size_t size) {
     if (size < 8 || size > 512){
-        smallObj.erase(ptr);
-        return ::operator delete(ptr);
+        if (smallObj.find(ptr) != smallObj.end()) {
+            ::free(ptr);
+            smallObj.erase(ptr);
+        }
+        return;
     }
     mutex[(size-8)/4].lock();
     mem[(size-8)/4].deallocate(ptr, num);

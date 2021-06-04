@@ -46,10 +46,14 @@ void TimeWheel::handleTickerTimeOut(void *arg) {
     Time* t = ((TimeWheelEventArg*)arg)->t;
     ObjPool::deallocate((TimeWheelEventArg*)arg);
     TimeWheel* tPtr = t->tPtr;
+    tPtr->mutex.lock();
     if (tPtr->toDelete.find(t->uuid) != tPtr->toDelete.end()){
         tPtr->toDelete.erase(t->uuid);
+        ObjPool::deallocate(t);
+        tPtr->mutex.unlock();
         return;
     }
+    tPtr->mutex.unlock();
     if (t->ePtr != nullptr){
         Event* e = ObjPool::allocate<Event>(EventTickerTimeOut, t);
         t->ePtr->receiveEvent(e);
@@ -101,7 +105,9 @@ void TimeWheel::handleTimeOut(void *arg) {
 }
 
 void TimeWheel::deleteTicker(const string& uuid) {
+    mutex.lock();
     toDelete.insert(uuid);
+    mutex.unlock();
 }
 
 void TimeWheel::addTimeToWheel(EventKey e, Time *t) {
@@ -137,12 +143,17 @@ void TimeWheel::addTimeToWheel(EventKey e, Time *t) {
 }
 
 TimeWheel::~TimeWheel() {
+    mutex.lock();
     for (int i = 0; i < 1000; i++) {
         while (!millisecond[i].empty()){
             Event* e = millisecond[i].front();
             millisecond[i].pop();
             TimeWheelEventArg* arg = (TimeWheelEventArg*)e->arg;
             ObjPool::deallocate(arg->nextTime);
+            if (toDelete.find(arg->t->uuid) != toDelete.end()){
+                toDelete.erase(arg->t->uuid);
+                ObjPool::deallocate(arg->t);
+            }
             ObjPool::deallocate(arg);
             ObjPool::deallocate(e);
         }
@@ -153,6 +164,10 @@ TimeWheel::~TimeWheel() {
             second[i].pop();
             TimeWheelEventArg* arg = (TimeWheelEventArg*)e->arg;
             ObjPool::deallocate(arg->nextTime);
+            if (toDelete.find(arg->t->uuid) != toDelete.end()){
+                toDelete.erase(arg->t->uuid);
+                ObjPool::deallocate(arg->t);
+            }
             ObjPool::deallocate(arg);
             ObjPool::deallocate(e);
         }
@@ -163,6 +178,10 @@ TimeWheel::~TimeWheel() {
             minute[i].pop();
             TimeWheelEventArg* arg = (TimeWheelEventArg*)e->arg;
             ObjPool::deallocate(arg->nextTime);
+            if (toDelete.find(arg->t->uuid) != toDelete.end()){
+                toDelete.erase(arg->t->uuid);
+                ObjPool::deallocate(arg->t);
+            }
             ObjPool::deallocate(arg);
             ObjPool::deallocate(e);
         }
@@ -173,9 +192,14 @@ TimeWheel::~TimeWheel() {
             hour[i].pop();
             TimeWheelEventArg* arg = (TimeWheelEventArg*)e->arg;
             ObjPool::deallocate(arg->nextTime);
+            if (toDelete.find(arg->t->uuid) != toDelete.end()){
+                toDelete.erase(arg->t->uuid);
+                ObjPool::deallocate(arg->t);
+            }
             ObjPool::deallocate(arg);
             ObjPool::deallocate(e);
         }
     }
+    mutex.unlock();
 }
 

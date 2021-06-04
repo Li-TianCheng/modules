@@ -13,8 +13,8 @@ public:
     void wait();
     Barrier(const Barrier&) = delete;
     Barrier(Barrier&&) = delete;
-    void operator=(const Barrier&) = delete;
-    void operator=(Barrier&&) = delete;
+    Barrier& operator=(const Barrier&) = delete;
+    Barrier& operator=(Barrier&&) = delete;
 private:
     Mutex mutex;
     Condition condition;

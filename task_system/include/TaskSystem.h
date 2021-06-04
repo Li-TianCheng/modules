@@ -7,7 +7,7 @@
 
 #include "ThreadPool.h"
 
-static const int InitNum       = 100;
+static const int InitNum       = 10;
 static const int QueueSize     = 100;
 
 class TaskSystem {

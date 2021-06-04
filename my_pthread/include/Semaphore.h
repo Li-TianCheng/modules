@@ -15,8 +15,8 @@ public:
     ~Semaphore();
     Semaphore(const Semaphore&) = delete;
     Semaphore(Semaphore&&) = delete;
-    void operator=(const Semaphore&) = delete;
-    void operator=(Semaphore&&) = delete;
+    Semaphore& operator=(const Semaphore&) = delete;
+    Semaphore& operator=(Semaphore&&) = delete;
 private:
     sem_t semaphore;
 };
