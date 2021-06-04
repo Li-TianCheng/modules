@@ -13,7 +13,7 @@
 #include "my_pthread/include/Thread.h"
 #include "time_system/include/TimeSystem.h"
 
-static const int MaxNum         = 20;
+static const int MaxNum         = 5000;
 
 using std::list;
 

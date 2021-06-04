@@ -5,7 +5,8 @@
 #include "ProgressBar.h"
 
 ProgressBar::ProgressBar(const string &title, int num) :curr(0,0,0,0,nullptr),
-    title(title), num(num), count(0), updateTime(0,0,0,500,this) {
+    title(title), num(num), count(0) {
+    updateTime = ObjPool::allocate<Time>(0,0,0,500,this);
     init();
 }
 
@@ -37,7 +38,7 @@ void ProgressBar::stop() {
 }
 
 void ProgressBar::cycleInit() {
-    uuid = TimeSystem::receiveEvent(EventTicker, &updateTime);
+    uuid = TimeSystem::receiveEvent(EventTicker, updateTime);
     for (int i = 0; i < 60-title.size(); i++){
         cout << " ";
     }
@@ -50,7 +51,7 @@ void ProgressBar::cycleClear() {
 }
 
 void ProgressBar::draw() {
-    curr += updateTime;
+    curr += *updateTime;
     cout << "\r";
     cout << "[" << count << "/" << num;
     cout << "|" << fixed << setprecision(2) << double(count)/num*100 << "%]";

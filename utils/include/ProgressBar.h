@@ -28,7 +28,7 @@ private:
     static void handleTimeOut(void* arg);
     void draw();
 private:
-    Time updateTime;
+    Time* updateTime;
     Time curr;
     string title;
     atomic<int> count;

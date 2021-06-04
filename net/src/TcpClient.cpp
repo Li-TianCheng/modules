@@ -3,6 +3,7 @@
 //
 
 #include "TcpClient.h"
+#include <iostream>
 
 TcpClient::TcpClient(const string &address, AddressType addressType) {
     vector<string> split = utils::split(address, ':');
@@ -32,19 +33,12 @@ void TcpClient::write(const string &context) {
 }
 
 string TcpClient::read() {
-    string readMsg;
-    while (true) {
-        int recvNum = recv(clientFd, buffer, sizeof(buffer), MSG_DONTWAIT);
-        if (recvNum <= 0) {
-            if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
-                break;
-            }
-            return "";
-        }
-        string temp = buffer;
-        temp.resize(recvNum);
-        readMsg += temp;
+    int recvNum = recv(clientFd, buffer, sizeof(buffer), 0);
+    if (recvNum == -1) {
+        return "";
     }
+    string readMsg = buffer;
+    readMsg.resize(recvNum);
     return readMsg;
 }
 
