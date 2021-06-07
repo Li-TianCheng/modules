@@ -10,7 +10,7 @@
 
 using namespace std;
 
-namespace utils{
+namespace utils {
     vector<string> split(const string& input, char spilt, int num=-1);
 }
 
