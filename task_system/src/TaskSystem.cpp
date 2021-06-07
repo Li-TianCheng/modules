@@ -20,7 +20,7 @@ void TaskSystem::addTask(void (*task)(void *), void *arg) {
 }
 
 ThreadPool &TaskSystem::getThreadPool() {
-    static ThreadPool threadPool(InitNum, QueueSize);
+    static ThreadPool threadPool(InitThreadNum, MaxThreadNum, TaskQueueSize);
     return threadPool;
 }
 

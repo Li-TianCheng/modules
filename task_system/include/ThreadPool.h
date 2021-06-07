@@ -13,8 +13,6 @@
 #include "my_pthread/include/Thread.h"
 #include "time_system/include/TimeSystem.h"
 
-static const int MaxNum         = 5000;
-
 using std::list;
 
 class _Thread : public Thread {
@@ -25,7 +23,7 @@ public:
 
 class ThreadPool: public EventSystem {
 public:
-    ThreadPool(int initNum, int queueSize);
+    ThreadPool(int initNum, int maxNum, int queueSize);
     void addTask(void (*task)(void*), void* arg);
     void cycleInit() override;
     void cycleClear() override;
@@ -56,6 +54,7 @@ private:
     std::atomic<int> threadNum;
     const int queueSize;
     const int initNum;
+    const int maxNum;
     volatile int shutdown;
     Condition condition;
     list<_Thread> threadPool;

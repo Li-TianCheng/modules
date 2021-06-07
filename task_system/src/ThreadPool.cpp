@@ -4,7 +4,8 @@
 
 #include "task_system/include/ThreadPool.h"
 
-ThreadPool::ThreadPool(int initNum, int queueSize): initNum(initNum), queueSize(queueSize), threadNum(initNum),
+ThreadPool::ThreadPool(int initNum, int maxNum, int queueSize): initNum(initNum), maxNum(maxNum),
+                                                    queueSize(queueSize), threadNum(initNum),
                                                     runningNum(0), shutdown(0), threadPool(initNum) {
     init();
 }
@@ -99,7 +100,7 @@ void ThreadPool::handleTimeOut(void* arg) {
 }
 
 void ThreadPool::increasePoolSize() {
-    if (runningNum != threadNum || threadNum >= MaxNum){
+    if (runningNum != threadNum || threadNum >= maxNum){
         return;
     }
     mutex.lock();

@@ -7,8 +7,9 @@
 
 #include "ThreadPool.h"
 
-static const int InitNum       = 10;
-static const int QueueSize     = 100;
+static const int InitThreadNum       = 10;
+static const int MaxThreadNum        = 20;
+static const int TaskQueueSize     = 100;
 
 class TaskSystem {
 public:
