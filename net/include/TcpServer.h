@@ -39,6 +39,8 @@ private:
 template<typename T> inline
 TcpServer<T>::TcpServer(int port, AddressType addressType) : isClose(false) {
     serverFd = socket(addressType, SOCK_STREAM, 0);
+    int reuse = 1;
+    setsockopt(serverFd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
     bzero(&serverAddress, sizeof(serverAddress));
     if (addressType == IPV4) {
         ((sockaddr_in*)(&serverAddress))->sin_family = PF_INET;

@@ -13,6 +13,7 @@ enum EpollEventType {
     Err = EPOLLERR,
     Et = EPOLLET,
     RdHup = EPOLLRDHUP,
+    Hup = EPOLLHUP,
     OneShot = EPOLLONESHOT
 };
 

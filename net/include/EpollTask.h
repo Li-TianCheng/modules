@@ -86,7 +86,7 @@ template<typename T> inline
 void EpollTask<T>::addNewSession(int fd, TcpSession* session) {
     mutex.lock();
     session->epollFd = epollFd;
-    session->epollEvent.events = Read|Err|RdHup|Et|OneShot;
+    session->epollEvent.events = Read|Err|Hup|RdHup|Et|OneShot;
     session->epollEvent.data.fd = fd;
     session->epoll = this;
     Time* t = ObjPool::allocate<Time>(0, 0, 1, 0, this);
@@ -145,7 +145,7 @@ void EpollTask<T>::readTask(void *arg) {
             if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
                 break;
             }
-            session->epollEvent.events = Err|RdHup|Et|OneShot;
+            session->epollEvent.events = Err|Hup|RdHup|Et|OneShot;
             session->isRead = false;
             session->resetEpollEvent();
             return;
@@ -166,12 +166,12 @@ void EpollTask<T>::writeTask(void *arg) {
     for (auto& msg : msgs) {
         int sendNum = send(session->epollEvent.data.fd, msg.data(), msg.size(), 0);
         if (sendNum < 0) {
-            session->epollEvent.events = Err|RdHup|Et|OneShot;
+            session->epollEvent.events = Err|Hup|RdHup|Et|OneShot;
             break;
         }
     }
     if (session->isCloseConnection) {
-        ((EpollTask<T>*)session->epoll)->delSession(session->epollEvent.data.fd);
+        ::shutdown(session->epollEvent.data.fd, SHUT_RD);
     }
     session->resetEpollEvent();
 }
@@ -185,7 +185,7 @@ void EpollTask<T>::cycleTask(void *arg) {
         int num = epoll_wait(epoll->epollFd, events, EventNum, WaitTime);
         for (int i = 0; i < num; i++) {
             auto event = events[i];
-            if (((event.events & RdHup) == RdHup) || ((event.events & Err) == Err)) {
+            if (((event.events & RdHup) == RdHup) || ((event.events & Err) == Err) || ((event.events & Hup) == Hup)) {
                 epoll->delSession(event.data.fd);
             } else {
                 if ((event.events & Read) == Read) {
@@ -227,7 +227,8 @@ template<typename T> inline
 void EpollTask<T>::handleCloseConnection(void *arg) {
     TcpSession* session = (TcpSession*)arg;
     if (!session->isWrite) {
-        ((EpollTask<T>*)session->epoll)->delSession(session->epollEvent.data.fd);
+        ::shutdown(session->epollEvent.data.fd, SHUT_RD);
+        session->resetEpollEvent();
     }
 }
 
