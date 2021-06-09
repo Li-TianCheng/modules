@@ -69,7 +69,7 @@ EpollTask<T>::EpollTask() : shutdown(false) {
 
 template<typename T> inline
 EpollTask<T>::~EpollTask() {
-    while (!sessionManager.empty()){}
+    while (!sessionManager.empty() || !uuidToFd.empty()){}
     ::close(epollFd);
 }
 
@@ -82,8 +82,12 @@ template<typename T> inline
 void EpollTask<T>::init() {
     registerEvent(EventEndCycle, nullptr);
     registerEvent(EventTickerTimeOut, handleTickerTimeOut);
+    registerEvent(EventTimerTimeOut, handleTimerTimeOut);
     registerEvent(EventCloseListen, handleCloseListen);
     registerEvent(EventCloseConnection, handleCloseConnection);
+    registerEvent(EventDeleteTicker, handleDeleteTicker);
+    registerEvent(EventTicker, handleTicker);
+    registerEvent(EventTimer, handleTimer);
 }
 
 template<typename T> inline
@@ -103,10 +107,12 @@ template<typename T> inline
 void EpollTask<T>::delSession(int fd) {
     rwLock.wrLock();
     epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &sessionManager[fd]->epollEvent);
-    TcpSession* session = sessionManager[fd];
-    session->sessionClear();
-    sessionManager.erase(fd);
-    ObjPool::deallocate((T*)session);
+    if (sessionManager.find(fd) != sessionManager.end()) {
+        TcpSession* session = sessionManager[fd];
+        session->sessionClear();
+        sessionManager.erase(fd);
+        ObjPool::deallocate((T*)session);
+    }
     ::close(fd);
     rwLock.unlock();
 }
@@ -129,8 +135,11 @@ void EpollTask<T>::handleTimerTimeOut(void *arg) {
     e->rwLock.wrLock();
     if (e->sessionManager.find(e->uuidToFd[t->uuid]) != e->sessionManager.end()) {
         e->sessionManager[e->uuidToFd[t->uuid]]->handleTimerTimeOut();
+    }
+    if (e->uuidToFd.find(t->uuid) != e->uuidToFd.end()) {
         e->uuidToFd.erase(t->uuid);
     }
+    ObjPool::deallocate((Time*)t);
     e->rwLock.unlock();
 }
 
@@ -150,11 +159,10 @@ void EpollTask<T>::handleTicker(void *arg) {
 
 template<typename T> inline
 void EpollTask<T>::handleDeleteTicker(void *arg) {
-    EpollTask<T>* e = (EpollTask<T>*)((EpollDeleteArg*)arg)->session->epoll;
+    EpollTask<T>* e = (EpollTask<T>*)((EpollDeleteArg*)arg)->epoll;
     e->rwLock.wrLock();
-    if (e->uuidToFd.find((EpollDeleteArg*)arg)->uuid != e->uuidToFd.end()) {
+    if (e->uuidToFd.find(((EpollDeleteArg*)arg)->uuid) != e->uuidToFd.end()) {
         e->uuidToFd.erase(((EpollDeleteArg*)arg)->uuid);
-        TimeSystem::deleteTicker(((EpollDeleteArg*)arg)->uuid);
     }
     ObjPool::deallocate((EpollDeleteArg*)arg);
     e->rwLock.unlock();
@@ -231,7 +239,7 @@ void EpollTask<T>::writeTask(void *arg) {
 template<typename T> inline
 void EpollTask<T>::cycleTask(void *arg) {
     EpollTask<T>* epoll = (EpollTask<T>*)arg;
-    while (epoll->server->isRunning() || !epoll->sessionManager.empty()) {
+    while (epoll->server->isRunning() || !epoll->sessionManager.empty() || !epoll->uuidToFd.empty()) {
         epoll->cycleNoBlock();
         epoll_event events[EventNum];
         int num = epoll_wait(epoll->epollFd, events, EventNum, WaitTime);
