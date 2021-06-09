@@ -10,6 +10,7 @@ enum EventKey{
     EventTimeOut,
     EventTimer,
     EventTicker,
+    EventDeleteTicker,
     EventTimerTimeOut,
     EventTickerTimeOut,
     EventIncreasePool,

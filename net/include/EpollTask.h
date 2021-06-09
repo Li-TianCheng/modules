@@ -13,7 +13,7 @@
 #include "time_system/include/TimeSystem.h"
 #include "event_system/include/EventSystem.h"
 #include "task_system/include/TaskSystem.h"
-#include "my_pthread/include/Mutex.h"
+#include "my_pthread/include/RwLock.h"
 #include "TcpSession.h"
 
 
@@ -40,14 +40,18 @@ public:
 private:
     void init();
     static void cycleTask(void* arg);
-    static void handleTimeOut(void* arg);
+    static void handleTickerTimeOut(void* arg);
+    static void handleTimerTimeOut(void* arg);
+    static void handleTicker(void* arg);
+    static void handleDeleteTicker(void* arg);
+    static void handleTimer(void* arg);
     static void readTask(void* arg);
     static void writeTask(void* arg);
     static void handleCloseConnection(void * arg);
     static void handleCloseListen(void * arg);
 private:
     bool shutdown;
-    Mutex mutex;
+    RwLock rwLock;
     int epollFd;
     TcpServer<T>* server;
     unordered_map<int, TcpSession*> sessionManager;
@@ -77,49 +81,97 @@ void EpollTask<T>::epollCycle() {
 template<typename T> inline
 void EpollTask<T>::init() {
     registerEvent(EventEndCycle, nullptr);
-    registerEvent(EventTickerTimeOut, handleTimeOut);
+    registerEvent(EventTickerTimeOut, handleTickerTimeOut);
     registerEvent(EventCloseListen, handleCloseListen);
     registerEvent(EventCloseConnection, handleCloseConnection);
 }
 
 template<typename T> inline
 void EpollTask<T>::addNewSession(int fd, TcpSession* session) {
-    mutex.lock();
+    rwLock.wrLock();
     session->epollFd = epollFd;
     session->epollEvent.events = Read|Err|Hup|RdHup|Et|OneShot;
     session->epollEvent.data.fd = fd;
     session->epoll = this;
-    Time* t = ObjPool::allocate<Time>(0, 0, 1, 0, this);
-    string uuid = TimeSystem::receiveEvent(EventTicker, t);
-    session->time = t;
-    uuidToFd[uuid] = fd;
+    session->sessionInit();
     sessionManager[fd] = session;
     epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &session->epollEvent);
-    mutex.unlock();
+    rwLock.unlock();
 }
 
 template<typename T> inline
 void EpollTask<T>::delSession(int fd) {
-    mutex.lock();
+    rwLock.wrLock();
     epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &sessionManager[fd]->epollEvent);
-    uuidToFd.erase(sessionManager[fd]->time->uuid);
-    TimeSystem::deleteTicker(sessionManager[fd]->time->uuid);
     TcpSession* session = sessionManager[fd];
+    session->sessionClear();
     sessionManager.erase(fd);
     ObjPool::deallocate((T*)session);
     ::close(fd);
-    mutex.unlock();
+    rwLock.unlock();
 }
 
 template<typename T> inline
-void EpollTask<T>::handleTimeOut(void *arg) {
+void EpollTask<T>::handleTickerTimeOut(void *arg) {
     Time* t = (Time*)arg;
     EpollTask<T>* e = (EpollTask<T>*)t->ePtr;
-    e->mutex.lock();
+    e->rwLock.rdLock();
     if (e->sessionManager.find(e->uuidToFd[t->uuid]) != e->sessionManager.end()) {
-        e->sessionManager[e->uuidToFd[t->uuid]]->handleTimeOut();
+        e->sessionManager[e->uuidToFd[t->uuid]]->handleTickerTimeOut();
     }
-    e->mutex.unlock();
+    e->rwLock.unlock();
+}
+
+template<typename T> inline
+void EpollTask<T>::handleTimerTimeOut(void *arg) {
+    Time* t = (Time*)arg;
+    EpollTask<T>* e = (EpollTask<T>*)t->ePtr;
+    e->rwLock.wrLock();
+    if (e->sessionManager.find(e->uuidToFd[t->uuid]) != e->sessionManager.end()) {
+        e->sessionManager[e->uuidToFd[t->uuid]]->handleTimerTimeOut();
+        e->uuidToFd.erase(t->uuid);
+    }
+    e->rwLock.unlock();
+}
+
+template<typename T> inline
+void EpollTask<T>::handleTicker(void *arg) {
+    TcpSession* session = ((EpollEventArg*)arg)->session;
+    Time* t = ((EpollEventArg*)arg)->t;
+    EpollTask<T>* e = (EpollTask<T>*)t->ePtr;
+    ObjPool::deallocate((EpollEventArg*)arg);
+    e->rwLock.wrLock();
+    if (e->sessionManager.find(session->epollEvent.data.fd) != e->sessionManager.end()) {
+        e->uuidToFd[t->uuid] = session->epollEvent.data.fd;
+        TimeSystem::receiveEvent(EventTicker, t);
+    }
+    e->rwLock.unlock();
+}
+
+template<typename T> inline
+void EpollTask<T>::handleDeleteTicker(void *arg) {
+    EpollTask<T>* e = (EpollTask<T>*)((EpollDeleteArg*)arg)->session->epoll;
+    e->rwLock.wrLock();
+    if (e->uuidToFd.find((EpollDeleteArg*)arg)->uuid != e->uuidToFd.end()) {
+        e->uuidToFd.erase(((EpollDeleteArg*)arg)->uuid);
+        TimeSystem::deleteTicker(((EpollDeleteArg*)arg)->uuid);
+    }
+    ObjPool::deallocate((EpollDeleteArg*)arg);
+    e->rwLock.unlock();
+}
+
+template<typename T> inline
+void EpollTask<T>::handleTimer(void *arg) {
+    TcpSession* session = ((EpollEventArg*)arg)->session;
+    Time* t = ((EpollEventArg*)arg)->t;
+    EpollTask<T>* e = (EpollTask<T>*)t->ePtr;
+    ObjPool::deallocate((EpollEventArg*)arg);
+    e->rwLock.wrLock();
+    if (e->sessionManager.find(session->epollEvent.data.fd) != e->sessionManager.end()) {
+        e->uuidToFd[t->uuid] = session->epollEvent.data.fd;
+        TimeSystem::receiveEvent(EventTimer, t);
+    }
+    e->rwLock.unlock();
 }
 
 template<typename T> inline
@@ -198,17 +250,17 @@ void EpollTask<T>::cycleTask(void *arg) {
                             ObjPool::deallocate((T*)session);
                         }
                     } else {
-                        epoll->mutex.lock();
+                        epoll->rwLock.rdLock();
                         TcpSession* session = epoll->sessionManager[event.data.fd];
                         TaskSystem::addTask(readTask, session);
-                        epoll->mutex.unlock();
+                        epoll->rwLock.unlock();
                     }
                 }
                 if ((event.events & Write) == Write) {
-                    epoll->mutex.lock();
+                    epoll->rwLock.rdLock();
                     TcpSession* session = epoll->sessionManager[event.data.fd];
                     TaskSystem::addTask(writeTask, session);
-                    epoll->mutex.unlock();
+                    epoll->rwLock.unlock();
                 }
             }
         }

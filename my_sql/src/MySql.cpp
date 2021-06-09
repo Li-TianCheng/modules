@@ -81,7 +81,7 @@ void MySql::increasePool() {
     for (int i = 0; i < InitConnNum; i++) {
         Connection* conn = ObjPool::allocate<Connection>();
         mysql_init(&conn->conn);
-        if (!mysql_real_connect(&conn->conn, host.data(), userName.data(), password.data(), dataBase.data(), port, nullptr, 0)) {
+        if (mysql_real_connect(&conn->conn, host.data(), userName.data(), password.data(), dataBase.data(), port, nullptr, CLIENT_MULTI_STATEMENTS) == nullptr) {
             mysql_close(&conn->conn);
             ObjPool::deallocate(conn);
             throw std::runtime_error("数据库连接创建失败");
@@ -102,7 +102,7 @@ void MySql::freeConnection(Connection *conn) {
 
 void MySql::executeSQL(const string &sql) {
     Connection* conn = getConnection();
-    if (!mysql_query(&conn->conn, sql.data())) {
+    if (mysql_query(&conn->conn, sql.data()) != 0) {
         freeConnection(conn);
         throw std::runtime_error("执行SQL失败");
     }
@@ -126,7 +126,7 @@ MySql::~MySql() {
 
 QueryData* MySql::queryData(const string &sql) {
     Connection* conn = getConnection();
-    if (!mysql_query(&conn->conn, sql.data())) {
+    if (mysql_query(&conn->conn, sql.data()) != 0) {
         freeConnection(conn);
         throw std::runtime_error("执行SQL失败");
     }

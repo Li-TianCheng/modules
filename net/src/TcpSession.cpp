@@ -49,3 +49,41 @@ void TcpSession::resetEpollEvent() {
     epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent);
 }
 
+void TcpSession::sessionInit() {
+
+}
+
+void TcpSession::sessionClear() {
+
+}
+
+string TcpSession::addTicker(int h, int m, int s, int ms) {
+    Time* t = ObjPool::allocate<Time>(h, m, s, ms, epoll);
+    EpollEventArg* arg = ObjPool::allocate<EpollEventArg>(t, this);
+    Event* e = ObjPool::allocate<Event>(EventTicker, arg);
+    epoll->receiveEvent(e);
+    return t->uuid;
+}
+
+string TcpSession::addTimer(int h, int m, int s, int ms) {
+    Time* t = ObjPool::allocate<Time>(h, m, s, ms, epoll);
+    EpollEventArg* arg = ObjPool::allocate<EpollEventArg>(t, this);
+    Event* e = ObjPool::allocate<Event>(EventTimer, arg);
+    epoll->receiveEvent(e);
+    return t->uuid;
+}
+
+void TcpSession::deleteTicker(const string &uuid) {
+    EpollDeleteArg* arg = ObjPool::allocate<EpollDeleteArg>(uuid, this);
+    Event* e = ObjPool::allocate<Event>(EventDeleteTicker, arg);
+    epoll->receiveEvent(e);
+}
+
+void TcpSession::handleTimerTimeOut() {
+
+}
+
+void TcpSession::handleTickerTimeOut() {
+
+}
+
