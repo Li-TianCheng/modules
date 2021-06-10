@@ -50,7 +50,7 @@ Connection* MySql::getConnection() {
 }
 
 void MySql::handleIncreasePool(void * arg) {
-    ((MySql*)((Time*)arg)->ePtr)->increasePool();
+    ((MySql*)arg)->increasePool();
 }
 
 void MySql::decreasePool() {
@@ -82,6 +82,7 @@ void MySql::increasePool() {
         Connection* conn = ObjPool::allocate<Connection>();
         mysql_init(&conn->conn);
         if (mysql_real_connect(&conn->conn, host.data(), userName.data(), password.data(), dataBase.data(), port, nullptr, CLIENT_MULTI_STATEMENTS) == nullptr) {
+            std::cerr << mysql_error(&conn->conn) << std::endl;
             mysql_close(&conn->conn);
             ObjPool::deallocate(conn);
             throw std::runtime_error("数据库连接创建失败");
@@ -95,17 +96,17 @@ void MySql::increasePool() {
 
 void MySql::freeConnection(Connection *conn) {
     mutex.lock();
+    for (auto& re : conn->result) {
+        mysql_free_result(re);
+    }
+    conn->result.clear();
     conn->next = free;
     free = conn;
     condition.notifyAll(mutex);
 }
 
 void MySql::executeSQL(const string &sql) {
-    Connection* conn = getConnection();
-    if (mysql_query(&conn->conn, sql.data()) != 0) {
-        freeConnection(conn);
-        throw std::runtime_error("执行SQL失败");
-    }
+    Connection* conn = queryData(sql);
     freeConnection(conn);
 }
 
@@ -122,21 +123,25 @@ MySql::~MySql() {
         }
         condition.notifyAll(mutex);
     }
+    TimeSystem::deleteTicker(uuid);
 }
 
-QueryData* MySql::queryData(const string &sql) {
+Connection* MySql::queryData(const string &sql) {
     Connection* conn = getConnection();
-    if (mysql_query(&conn->conn, sql.data()) != 0) {
+    if (mysql_real_query(&conn->conn, sql.data(), sql.size()) != 0) {
+        std::cerr << mysql_error(&conn->conn) << std::endl;
         freeConnection(conn);
         throw std::runtime_error("执行SQL失败");
     }
-    MYSQL_RES* res = mysql_store_result(&conn->conn);
-    QueryData* result = ObjPool::allocate<QueryData>(res, conn);
-    return result;
+    MYSQL_RES* re = mysql_store_result(&conn->conn);
+    conn->result.push_back(re);
+    while (!mysql_next_result(&conn->conn) ) {
+        MYSQL_RES* re = mysql_store_result(&conn->conn);
+        conn->result.push_back(re);
+    }
+    return conn;
 }
 
-void MySql::freeQueryData(QueryData* result) {
-    mysql_free_result(result->result);
-    freeConnection(result->conn);
-    ObjPool::deallocate(result);
+void MySql::freeQueryData(Connection* conn) {
+    freeConnection(conn);
 }

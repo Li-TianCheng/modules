@@ -14,6 +14,7 @@
 #include "EpollTask.h"
 
 static const int EpollNum = 3;
+static const int MaxWaitNum = 5000;
 
 template<typename T>
 class TcpServer : public EventSystem {
@@ -74,7 +75,7 @@ void TcpServer<T>::addNewSession(int fd, TcpSession* session) {
 
 template<typename T> inline
 int TcpServer<T>::hash(int fd) {
-    return fd % EpollNum;
+    return std::hash<int>()(fd) % EpollNum;
 }
 
 template<typename T> inline
@@ -114,7 +115,7 @@ TcpServer<T>::~TcpServer() {
 
 template<typename T> inline
 void TcpServer<T>::serve() {
-    int err = ::listen(serverFd, 5000);
+    int err = ::listen(serverFd, MaxWaitNum);
     if (err == -1){
         ::close(serverFd);
         throw std::runtime_error("监听失败");

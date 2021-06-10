@@ -21,14 +21,12 @@ static const int InitConnNum = 10;
 static const int MaxConnNum  = 100;
 
 struct Connection {
+public:
+    vector<MYSQL_RES*> result;
+private:
+    friend class MySql;
     MYSQL conn;
     Connection* next = nullptr;
-};
-
-struct QueryData {
-    MYSQL_RES* result;
-    Connection* conn;
-    QueryData(MYSQL_RES* result, Connection* conn) : result(result), conn(conn) {};
 };
 
 class MySql : public EventSystem{
@@ -37,8 +35,8 @@ public:
     void connect();
     void close();
     void executeSQL(const string& sql);
-    QueryData* queryData(const string& sql);
-    void freeQueryData(QueryData* result);
+    Connection* queryData(const string& sql);
+    void freeQueryData(Connection* conn);
     ~MySql() override;
 private:
     Connection* getConnection();
