@@ -89,7 +89,8 @@ void TcpServer<T>::close() {
         Event* e = ObjPool::allocate<Event>(EventEndCycle, nullptr);
         receiveEvent(e);
         isClose = true;
-        ::shutdown(serverFd, SHUT_RD) ;
+        ::shutdown(serverFd, SHUT_RD);
+        epollList[0].delListener(epollEvent);
         ::close(serverFd);
     }
 }

@@ -35,6 +35,7 @@ public:
     bool isRunning();
     ~EpollTask() override;
     void addListener(epoll_event& e);
+    void delListener(epoll_event& e);
     void addNewSession(int fd, TcpSession* session);
     void delSession(int fd);
 private:
@@ -187,6 +188,11 @@ void EpollTask<T>::addListener(epoll_event& e) {
     e.events = Read | Err;
     e.data.fd = server->getServerFd();
     epoll_ctl(epollFd, EPOLL_CTL_ADD, server->getServerFd(), &e);
+}
+
+template<typename T> inline
+void EpollTask<T>::delListener(epoll_event& e) {
+    epoll_ctl(epollFd, EPOLL_CTL_DEL, server->getServerFd(), &e);
 }
 
 template<typename T> inline
