@@ -4,13 +4,13 @@
 
 #include "ProgressBar.h"
 
-ProgressBar::ProgressBar(const string &title, int num) :curr(0,0,0,0,nullptr),
+ProgressBar::ProgressBar(const string &title, int num) :curr(0,0,0,0,nullptr), updateTime(nullptr),
     title(title), num(num), count(0) {
-    updateTime = ObjPool::allocate<Time>(0,0,0,500,this);
     init();
 }
 
 void ProgressBar::start() {
+    updateTime = ObjPool::allocate<Time>(0,0,0,500,this);
     TaskSystem::addTask(cycleTask, this);
 }
 
