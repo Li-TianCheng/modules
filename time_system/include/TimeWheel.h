@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <unordered_set>
+#include <unistd.h>
 #include <sys/epoll.h>
 #include "event_system/include/EventSystem.h"
 #include "Time.h"

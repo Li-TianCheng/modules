@@ -96,17 +96,25 @@ void MySql::increasePool() {
 
 void MySql::freeConnection(Connection *conn) {
     mutex.lock();
-    for (auto& re : conn->result) {
-        mysql_free_result(re);
-    }
-    conn->result.clear();
     conn->next = free;
     free = conn;
     condition.notifyAll(mutex);
 }
 
 void MySql::executeSQL(const string &sql) {
-    Connection* conn = queryData(sql);
+    Connection* conn = getConnection();
+    if (mysql_real_query(&conn->conn, sql.data(), sql.size()) != 0) {
+        std::cerr << mysql_error(&conn->conn) << std::endl;
+        freeConnection(conn);
+        throw std::runtime_error("执行SQL失败");
+    }
+    while (true) {
+        MYSQL_RES* re = mysql_store_result(&conn->conn);
+        mysql_free_result(re);
+        if (mysql_next_result(&conn->conn) != 0) {
+            break;
+        }
+    }
     freeConnection(conn);
 }
 
@@ -126,22 +134,39 @@ MySql::~MySql() {
     TimeSystem::deleteTicker(uuid);
 }
 
-Connection* MySql::queryData(const string &sql) {
+vector<vector<unordered_map<string, string>>> MySql::queryData(const string &sql) {
     Connection* conn = getConnection();
     if (mysql_real_query(&conn->conn, sql.data(), sql.size()) != 0) {
         std::cerr << mysql_error(&conn->conn) << std::endl;
         freeConnection(conn);
         throw std::runtime_error("执行SQL失败");
     }
-    MYSQL_RES* re = mysql_store_result(&conn->conn);
-    conn->result.push_back(re);
-    while (!mysql_next_result(&conn->conn) ) {
+    vector<vector<unordered_map<string, string>>> result;
+    while (true) {
         MYSQL_RES* re = mysql_store_result(&conn->conn);
-        conn->result.push_back(re);
+        MYSQL_FIELD* field = mysql_fetch_field(re);
+        vector<unordered_map<string, string>> temp;
+        while (true) {
+            MYSQL_ROW row = mysql_fetch_row(re);
+            if (!row) {
+                break;
+            }
+            unordered_map<string, string> map;
+            for (int i = 0; i < mysql_num_fields(re); i++) {
+                if (row[i] == nullptr) {
+                    map[field[i].name] = "NULL";
+                } else {
+                    map[field[i].name] = row[i];
+                }
+            }
+            temp.push_back(map);
+        }
+        mysql_free_result(re);
+        result.push_back(temp);
+        if (mysql_next_result(&conn->conn) != 0) {
+            break;
+        }
     }
-    return conn;
-}
-
-void MySql::freeQueryData(Connection* conn) {
     freeConnection(conn);
+    return result;
 }

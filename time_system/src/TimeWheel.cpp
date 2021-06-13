@@ -158,6 +158,7 @@ TimeWheel::~TimeWheel() {
         }
     }
     mutex.unlock();
+    ::close(epollFd);
 }
 
 void *TimeWheel::timeWheelCycle(void *arg) {

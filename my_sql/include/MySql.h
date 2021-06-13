@@ -6,7 +6,8 @@
 #define MYSQL_MYSQL_H
 
 #include <string>
-#include <list>
+#include <vector>
+#include <unordered_map>
 #include <queue>
 #include <mysql/mysql.h>
 #include "event_system/include/EventSystem.h"
@@ -14,17 +15,14 @@
 #include "task_system/include/TaskSystem.h"
 
 using std::string;
-using std::list;
 using std::queue;
+using std::vector;
+using std::unordered_map;
 
 static const int InitConnNum = 10;
 static const int MaxConnNum  = 100;
 
 struct Connection {
-public:
-    vector<MYSQL_RES*> result;
-private:
-    friend class MySql;
     MYSQL conn;
     Connection* next = nullptr;
 };
@@ -35,8 +33,7 @@ public:
     void connect();
     void close();
     void executeSQL(const string& sql);
-    Connection* queryData(const string& sql);
-    void freeQueryData(Connection* conn);
+    vector<vector<unordered_map<string, string>>> queryData(const string& sql);
     ~MySql() override;
 private:
     Connection* getConnection();
