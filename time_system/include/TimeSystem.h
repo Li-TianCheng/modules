@@ -22,10 +22,7 @@ public:
 private:
     TimeSystem() = default;
     static TimeWheel& getTimeWheel();
-    static Thread& getTiming();
     static Thread& getThread();
-    static void* timing(void*);
-    static void* handle(void*);
 };
 
 

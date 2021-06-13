@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <unordered_set>
+#include <sys/epoll.h>
 #include "event_system/include/EventSystem.h"
 #include "Time.h"
 
@@ -18,6 +19,7 @@ public:
     TimeWheel();
     ~TimeWheel() override;
     void deleteTicker(const string& uuid);
+    static void* timeWheelCycle(void* arg);
     TimeWheel(const TimeWheel&) = delete;
     TimeWheel(TimeWheel&&) = delete;
     TimeWheel& operator=(const TimeWheel&) = delete;
@@ -25,20 +27,24 @@ public:
 private:
     void init();
     void addTimeToWheel(EventKey e, Time* t);
+    void update();
+    static void handleTimerEvent(void* arg);
+    static void handleTickerEvent(void* arg);
+    static void handleTimerTimeOut(void* arg);
+    static void handleTickerTimeOut(void* arg);
+    static void handleEndCycle(void* arg);
+private:
     unordered_set<string> toDelete;
     vector<queue<Event*>> millisecond;
     vector<queue<Event*>> second;
     vector<queue<Event*>> minute;
     vector<queue<Event*>> hour;
+    volatile bool shutdown;
+    int epollFd;
     int msIter;
     int sIter;
     int mIter;
     int hIter;
-    static void handleTimerEvent(void* arg);
-    static void handleTickerEvent(void* arg);
-    static void handleTimerTimeOut(void* arg);
-    static void handleTickerTimeOut(void* arg);
-    static void handleTimeOut(void* arg);
     Mutex mutex;
 };
 

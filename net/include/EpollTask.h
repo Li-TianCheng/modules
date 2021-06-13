@@ -245,6 +245,7 @@ void EpollTask<T>::writeTask(void *arg) {
 template<typename T> inline
 void EpollTask<T>::cycleTask(void *arg) {
     EpollTask<T>* epoll = (EpollTask<T>*)arg;
+    epoll->cycleInit();
     while (epoll->server->isRunning() || !epoll->sessionManager.empty() || !epoll->uuidToFd.empty()) {
         epoll->cycleNoBlock();
         epoll_event events[EventNum];

@@ -4,17 +4,17 @@
 #include "time_system/include/TimeWheel.h"
 
 TimeWheel::TimeWheel(): millisecond(1000), second(60), minute(60), hour(24),
-                        msIter(0), sIter(0), mIter(0), hIter(0) {
+                        msIter(0), sIter(0), mIter(0), hIter(0), shutdown(false) {
+    epollFd = epoll_create(1);
     init();
 }
 
 void TimeWheel::init() {
-    registerEvent(EventTimeOut, handleTimeOut);
     registerEvent(EventTimer, handleTimerEvent);
     registerEvent(EventTicker, handleTickerEvent);
     registerEvent(EventTimerTimeOut, handleTimerTimeOut);
     registerEvent(EventTickerTimeOut, handleTickerTimeOut);
-    registerEvent(EventEndCycle, nullptr);
+    registerEvent(EventEndCycle, handleEndCycle);
 }
 
 void TimeWheel::handleTimerEvent(void* arg) {
@@ -59,49 +59,6 @@ void TimeWheel::handleTickerTimeOut(void *arg) {
         t->ePtr->receiveEvent(e);
     }
     handleTickerEvent(t);
-}
-
-void TimeWheel::handleTimeOut(void *arg) {
-    TimeWheel* tw = (TimeWheel*)arg;
-    while (!tw->millisecond[tw->msIter].empty()){
-        Event* e = tw->millisecond[tw->msIter].front();
-        tw->doEvent(e);
-        tw->millisecond[tw->msIter].pop();
-    }
-    tw->msIter++;
-    if (tw->msIter == 1000){
-        tw->msIter = 0;
-        tw->sIter = tw->sIter+1;
-        if (tw->sIter == 60){
-            tw->sIter = 0;
-            tw->mIter = tw->mIter+1;
-            if (tw->mIter == 60){
-                tw->mIter = 0;
-                tw->hIter = tw->hIter+1;
-                if (tw->hIter == 24){
-                    tw->hIter = 0;
-                }
-                while(!tw->hour[tw->hIter].empty()){
-                    Event* e = tw->hour[tw->hIter].front();
-                    TimeWheelEventArg* arg = (TimeWheelEventArg*)e->arg;
-                    tw->minute[arg->nextTime->m].push(e);
-                    tw->hour[tw->hIter].pop();
-                }
-            }
-            while(!tw->minute[tw->mIter].empty()){
-                Event* e = tw->minute[tw->mIter].front();
-                TimeWheelEventArg* arg = (TimeWheelEventArg*)e->arg;
-                tw->second[arg->nextTime->s].push(e);
-                tw->minute[tw->mIter].pop();
-            }
-        }
-        while(!tw->second[tw->sIter].empty()){
-            Event* e = tw->second[tw->sIter].front();
-            TimeWheelEventArg* arg = (TimeWheelEventArg*)e->arg;
-            tw->millisecond[arg->nextTime->ms].push(e);
-            tw->second[tw->sIter].pop();
-        }
-    }
 }
 
 void TimeWheel::deleteTicker(const string& uuid) {
@@ -201,5 +158,61 @@ TimeWheel::~TimeWheel() {
         }
     }
     mutex.unlock();
+}
+
+void *TimeWheel::timeWheelCycle(void *arg) {
+    TimeWheel* t = (TimeWheel*)arg;
+    t->cycleInit();
+    while (!t->shutdown) {
+        t->cycleNoBlock();
+        epoll_wait(t->epollFd, nullptr, 1, 1);
+        t->update();
+    }
+}
+
+void TimeWheel::update() {
+    while (!millisecond[msIter].empty()){
+        Event* e = millisecond[msIter].front();
+        doEvent(e);
+        millisecond[msIter].pop();
+    }
+    msIter++;
+    if (msIter == 1000){
+        msIter = 0;
+        sIter = sIter+1;
+        if (sIter == 60){
+            sIter = 0;
+            mIter = mIter+1;
+            if (mIter == 60){
+                mIter = 0;
+                hIter = hIter+1;
+                if (hIter == 24){
+                    hIter = 0;
+                }
+                while(!hour[hIter].empty()){
+                    Event* e = hour[hIter].front();
+                    TimeWheelEventArg* arg = (TimeWheelEventArg*)e->arg;
+                    minute[arg->nextTime->m].push(e);
+                    hour[hIter].pop();
+                }
+            }
+            while(!minute[mIter].empty()){
+                Event* e = minute[mIter].front();
+                TimeWheelEventArg* arg = (TimeWheelEventArg*)e->arg;
+                second[arg->nextTime->s].push(e);
+                minute[mIter].pop();
+            }
+        }
+        while(!second[sIter].empty()){
+            Event* e = second[sIter].front();
+            TimeWheelEventArg* arg = (TimeWheelEventArg*)e->arg;
+            millisecond[arg->nextTime->ms].push(e);
+            second[sIter].pop();
+        }
+    }
+}
+
+void TimeWheel::handleEndCycle(void *arg) {
+    ((TimeWheel*)arg)->shutdown = true;
 }
 
