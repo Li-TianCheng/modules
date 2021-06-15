@@ -28,8 +28,8 @@ public:
     void deleteTicker(string& uuid);
     virtual void sessionInit();
     virtual void sessionClear();
-    virtual void handleTickerTimeOut();
-    virtual void handleTimerTimeOut();
+    virtual void handleTickerTimeOut(const string& uuid);
+    virtual void handleTimerTimeOut(const string& uuid);
     virtual void handleReadDone(const string& recvMsg) = 0;
     virtual ~TcpSession() = default;
 private:

@@ -124,7 +124,7 @@ void EpollTask<T>::handleTickerTimeOut(void *arg) {
     EpollTask<T>* e = (EpollTask<T>*)t->ePtr;
     e->rwLock.rdLock();
     if (e->sessionManager.find(e->uuidToFd[t->uuid]) != e->sessionManager.end()) {
-        e->sessionManager[e->uuidToFd[t->uuid]]->handleTickerTimeOut();
+        e->sessionManager[e->uuidToFd[t->uuid]]->handleTickerTimeOut(t->uuid);
     }
     e->rwLock.unlock();
 }
@@ -135,7 +135,7 @@ void EpollTask<T>::handleTimerTimeOut(void *arg) {
     EpollTask<T>* e = (EpollTask<T>*)t->ePtr;
     e->rwLock.wrLock();
     if (e->sessionManager.find(e->uuidToFd[t->uuid]) != e->sessionManager.end()) {
-        e->sessionManager[e->uuidToFd[t->uuid]]->handleTimerTimeOut();
+        e->sessionManager[e->uuidToFd[t->uuid]]->handleTimerTimeOut(t->uuid);
     }
     if (e->uuidToFd.find(t->uuid) != e->uuidToFd.end()) {
         e->uuidToFd.erase(t->uuid);

@@ -80,11 +80,11 @@ void TcpSession::deleteTicker(string &uuid) {
     epoll->receiveEvent(e);
 }
 
-void TcpSession::handleTimerTimeOut() {
+void TcpSession::handleTimerTimeOut(const string& uuid) {
 
 }
 
-void TcpSession::handleTickerTimeOut() {
+void TcpSession::handleTickerTimeOut(const string& uuid) {
 
 }
 
