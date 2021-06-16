@@ -231,36 +231,33 @@ void EpollTask<T>::readTask(void *arg) {
 template<typename T> inline
 void EpollTask<T>::writeTask(void *arg) {
     TcpSession* session = (TcpSession*)arg;
-    int status = 0;
     session->mutex.lock();
     while (!session->msgQueue.empty()) {
-        if (status != 0) {
-            break;
-        }
         int offset = 0;
         while (offset != session->msgQueue.front().size()) {
             int sendNum = send(session->epollEvent.data.fd, session->msgQueue.front().data()+offset, session->msgQueue.front().size()-offset, MSG_DONTWAIT);
             if (sendNum <= 0) {
                 if (errno == EAGAIN) {
                     session->msgQueue.front() = session->msgQueue.front().substr(offset);
-                    status = 1;
-                    break;
+                    epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
+                    session->mutex.unlock();
+                    return;
                 } else {
                     session->epollEvent.events = Err|Hup|RdHup|Et|OneShot;
-                    status = 2;
-                    break;
+                    session->isWrite = false;
+                    session->resetEpollEvent();
+                    session->mutex.unlock();
+                    return;
                 }
             }
             offset += sendNum;
         }
         session->msgQueue.pop();
     }
-    if (status == 0) {
-        session->isWrite = false;
-        session->epollEvent.events ^= Write;
-    }
+    session->isWrite = false;
+    session->epollEvent.events &= ~Write;
     session->mutex.unlock();
-    if (!session->isWrite && session->isCloseConnection) {
+    if (session->isCloseConnection) {
         ::shutdown(session->epollEvent.data.fd, SHUT_RD);
     }
     session->resetEpollEvent();
