@@ -27,6 +27,7 @@ private:
     std::unordered_set<void*> smallObj;
     vector<ManageChunk> mem;
     vector<Mutex> mutex;
+    Mutex smallObjMutex;
     int num;
 };
 

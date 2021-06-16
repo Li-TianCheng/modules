@@ -16,7 +16,9 @@ void* MemPool::allocate(size_t size) {
         if (ptr == nullptr) {
             throw std::runtime_error("内存分配错误");
         }
+        smallObjMutex.lock();
         smallObj.insert(ptr);
+        smallObjMutex.unlock();
         return ptr;
     }
     mutex[(size-8)/4].lock();
@@ -27,10 +29,12 @@ void* MemPool::allocate(size_t size) {
 
 void MemPool::deallocate(void *ptr, size_t size) {
     if (size < 8 || size > 512){
+        smallObjMutex.lock();
         if (smallObj.find(ptr) != smallObj.end()) {
             ::free(ptr);
             smallObj.erase(ptr);
         }
+        smallObjMutex.unlock();
         return;
     }
     mutex[(size-8)/4].lock();
