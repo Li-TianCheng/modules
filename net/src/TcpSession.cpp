@@ -28,20 +28,6 @@ void TcpSession::closeListen() {
     epoll->receiveEvent(e);
 }
 
-vector<string> TcpSession::getMsgs() {
-    vector<string> msgs;
-    mutex.lock();
-    while (!msgQueue.empty()) {
-        string temp = msgQueue.front();
-        msgs.push_back(temp);
-        msgQueue.pop();
-    }
-    isWrite = false;
-    epollEvent.events ^= Write;
-    mutex.unlock();
-    return msgs;
-}
-
 void TcpSession::resetEpollEvent() {
     if (isRead || isWrite) {
         return;

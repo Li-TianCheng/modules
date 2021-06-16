@@ -6,6 +6,7 @@
 #define NET_EPOLLTASK_H
 
 #include <sys/epoll.h>
+#include <fcntl.h>
 #include <unordered_map>
 #include <vector>
 #include <unistd.h>
@@ -94,6 +95,8 @@ void EpollTask<T>::init() {
 template<typename T> inline
 void EpollTask<T>::addNewSession(int fd, TcpSession* session) {
     rwLock.wrLock();
+    int flags = fcntl(fd, 0);
+    fcntl(fd, F_SETFL, flags|O_NONBLOCK);
     session->epollFd = epollFd;
     session->epollEvent.events = Read|Err|Hup|RdHup|Et|OneShot;
     session->epollEvent.data.fd = fd;
@@ -228,15 +231,36 @@ void EpollTask<T>::readTask(void *arg) {
 template<typename T> inline
 void EpollTask<T>::writeTask(void *arg) {
     TcpSession* session = (TcpSession*)arg;
-    vector<string> msgs = session->getMsgs();
-    for (auto& msg : msgs) {
-        int sendNum = send(session->epollEvent.data.fd, msg.data(), msg.size(), 0);
-        if (sendNum < 0) {
-            session->epollEvent.events = Err|Hup|RdHup|Et|OneShot;
+    int status = 0;
+    session->mutex.lock();
+    while (!session->msgQueue.empty()) {
+        if (status != 0) {
             break;
         }
+        int offset = 0;
+        while (offset != session->msgQueue.front().size()) {
+            int sendNum = send(session->epollEvent.data.fd, session->msgQueue.front().data()+offset, session->msgQueue.front().size()-offset, MSG_DONTWAIT);
+            if (sendNum <= 0) {
+                if (errno == EAGAIN) {
+                    session->msgQueue.front() = session->msgQueue.front().substr(offset);
+                    status = 1;
+                    break;
+                } else {
+                    session->epollEvent.events = Err|Hup|RdHup|Et|OneShot;
+                    status = 2;
+                    break;
+                }
+            }
+            offset += sendNum;
+        }
+        session->msgQueue.pop();
     }
-    if (session->isCloseConnection) {
+    if (status == 0) {
+        session->isWrite = false;
+        session->epollEvent.events ^= Write;
+    }
+    session->mutex.unlock();
+    if (!session->isWrite && session->isCloseConnection) {
         ::shutdown(session->epollEvent.data.fd, SHUT_RD);
     }
     session->resetEpollEvent();

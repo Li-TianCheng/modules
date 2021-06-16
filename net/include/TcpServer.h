@@ -24,7 +24,7 @@ public:
     void addNewSession(int fd, TcpSession* session);
     bool isRunning();
     void close();
-    void serve();
+    void cycleInit() override;
     ~TcpServer() override;
 private:
     int hash(int fd);
@@ -115,7 +115,7 @@ TcpServer<T>::~TcpServer() {
 }
 
 template<typename T> inline
-void TcpServer<T>::serve() {
+void TcpServer<T>::cycleInit() {
     int err = ::listen(serverFd, MaxWaitNum);
     if (err == -1){
         ::close(serverFd);
@@ -125,7 +125,6 @@ void TcpServer<T>::serve() {
     for (auto& e : epollList) {
         e.epollCycle();
     }
-    cycle();
 }
 
 #endif //NET_TCPSERVER_H

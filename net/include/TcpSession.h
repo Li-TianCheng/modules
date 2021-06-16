@@ -33,7 +33,6 @@ public:
     virtual void handleReadDone(const string& recvMsg) = 0;
     virtual ~TcpSession() = default;
 private:
-    vector<string> getMsgs();
     void resetEpollEvent();
     template<typename T>
     friend class EpollTask;
