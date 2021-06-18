@@ -16,6 +16,9 @@ HttpSession::HttpSession() : request(nullptr), status(0), timeout(0) {
 }
 
 void HttpSession::match(Http* request) {
+    if (request->line["url"] == "/close") {
+        closeListen();
+    }
     Http response(false);
     response.line["version"] = request->line["version"];
     response.line["status"] = "404";
@@ -52,6 +55,9 @@ void HttpSession::match(Http* request) {
 void HttpSession::parse(char &c) {
     switch(status) {
         case 0:{
+            if (request != nullptr) {
+                ObjPool::deallocate(request);
+            }
             request = ObjPool::allocate<Http>(true);
             status = 1;
         }
@@ -143,9 +149,7 @@ void HttpSession::parse(char &c) {
 }
 
 HttpSession::~HttpSession() {
-    if (request != nullptr) {
-        ObjPool::deallocate(request);
-    }
+    while (request != nullptr) {}
 }
 
 string HttpSession::getGMTTime() {
