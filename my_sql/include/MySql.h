@@ -24,7 +24,7 @@ static const int MaxConnNum  = 100;
 
 struct Connection {
     MYSQL conn;
-    Connection* next = nullptr;
+    shared_ptr<Connection> next = nullptr;
 };
 
 class MySql : public EventSystem{
@@ -36,22 +36,22 @@ public:
     vector<vector<unordered_map<string, string>>> queryData(const string& sql);
     ~MySql() override;
 private:
-    Connection* getConnection();
-    void freeConnection(Connection* conn);
+    shared_ptr<Connection> getConnection();
+    void freeConnection(const shared_ptr<Connection>& conn);
     void increasePool();
     void decreasePool();
     void init();
     void cycleClear() override;
-    static void handleTimeOut(void* arg);
-    static void handleIncreasePool(void* arg);
+    static void handleTimeOut(const shared_ptr<void>& arg);
+    static void handleIncreasePool(const shared_ptr<void>& arg);
 private:
     const string userName;
     const string password;
     const string dataBase;
     const string host;
     const int port;
-    Connection* free;
-    Time* checkTime;
+    shared_ptr<Connection> free;
+    shared_ptr<Time> checkTime;
     string uuid;
     Mutex mutex;
     volatile int connNum;

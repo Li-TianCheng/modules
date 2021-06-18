@@ -18,16 +18,14 @@ public:
     explicit MemPool(int num);
     void* allocate(size_t size);
     void deallocate(void* ptr, size_t size);
-    ~MemPool();
+    ~MemPool() = default;
     MemPool(const MemPool&) = delete;
     MemPool(MemPool&&) = delete;
     MemPool& operator=(const MemPool&) = delete;
     MemPool& operator=(MemPool&&) = delete;
 private:
-    std::unordered_set<void*> smallObj;
     vector<ManageChunk> mem;
     vector<Mutex> mutex;
-    Mutex smallObjMutex;
     int num;
 };
 

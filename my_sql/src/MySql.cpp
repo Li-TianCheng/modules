@@ -20,37 +20,39 @@ void MySql::cycleClear() {
     TimeSystem::deleteTicker(uuid);
 }
 
-void MySql::handleTimeOut(void *arg) {
-    ((MySql*)((Time*)arg)->ePtr)->decreasePool();
+void MySql::handleTimeOut(const shared_ptr<void>& arg) {
+    ((MySql*)(static_pointer_cast<Time>(arg))->ePtr)->decreasePool();
 }
 
 void MySql::close() {
-    Event* e = ObjPool::allocate<Event>(EventEndCycle, nullptr);
+    auto e = ObjPool::allocate<Event>(EventEndCycle, nullptr);
     receiveEvent(e);
 }
 
 void MySql::connect() {
     increasePool();
-    TaskSystem::addTask(cycleTask, this);
+    auto arg = ObjPool::allocate<MySql*>(this);
+    TaskSystem::addTask(cycleTask, arg);
     checkTime = ObjPool::allocate<Time>(0, 0, 1, 0, this);
     uuid = TimeSystem::receiveEvent(EventTicker, checkTime);
 }
 
-Connection* MySql::getConnection() {
+shared_ptr<Connection> MySql::getConnection() {
     mutex.lock();
     while (free == nullptr) {
-        Event* e = ObjPool::allocate<Event>(EventIncreasePool, this);
+        auto arg = ObjPool::allocate<MySql*>(this);
+        auto e = ObjPool::allocate<Event>(EventIncreasePool, arg);
         receiveEvent(e);
         condition.wait(mutex);
     }
-    Connection* conn = free;
+    shared_ptr<Connection> conn = free;
     free = free->next;
     condition.notifyAll(mutex);
     return conn;
 }
 
-void MySql::handleIncreasePool(void * arg) {
-    ((MySql*)arg)->increasePool();
+void MySql::handleIncreasePool(const shared_ptr<void>& arg) {
+    (*static_pointer_cast<MySql*>(arg))->increasePool();
 }
 
 void MySql::decreasePool() {
@@ -63,11 +65,10 @@ void MySql::decreasePool() {
         if (free == nullptr) {
             break;
         }
-        Connection* temp = free;
+        shared_ptr<Connection> temp = free;
         free = free->next;
         mysql_close(&temp->conn);
         temp->next = nullptr;
-        ObjPool::deallocate(temp);
         connNum--;
     }
     condition.notifyAll(mutex);
@@ -79,12 +80,11 @@ void MySql::increasePool() {
     }
     mutex.lock();
     for (int i = 0; i < InitConnNum; i++) {
-        Connection* conn = ObjPool::allocate<Connection>();
+        auto conn = ObjPool::allocate<Connection>();
         mysql_init(&conn->conn);
         if (mysql_real_connect(&conn->conn, host.data(), userName.data(), password.data(), dataBase.data(), port, nullptr, CLIENT_MULTI_STATEMENTS) == nullptr) {
             std::cerr << mysql_error(&conn->conn) << std::endl;
             mysql_close(&conn->conn);
-            ObjPool::deallocate(conn);
             throw std::runtime_error("数据库连接创建失败");
         }
         conn->next = free;
@@ -94,7 +94,7 @@ void MySql::increasePool() {
     condition.notifyAll(mutex);
 }
 
-void MySql::freeConnection(Connection *conn) {
+void MySql::freeConnection(const shared_ptr<Connection>& conn) {
     mutex.lock();
     conn->next = free;
     free = conn;
@@ -102,7 +102,7 @@ void MySql::freeConnection(Connection *conn) {
 }
 
 void MySql::executeSQL(const string &sql) {
-    Connection* conn = getConnection();
+    shared_ptr<Connection> conn = getConnection();
     if (mysql_real_query(&conn->conn, sql.data(), sql.size()) != 0) {
         std::cerr << mysql_error(&conn->conn) << std::endl;
         freeConnection(conn);
@@ -122,11 +122,10 @@ MySql::~MySql() {
     while (connNum != 0) {
         mutex.lock();
         while (free != nullptr) {
-            Connection* temp = free;
+            shared_ptr<Connection> temp = free;
             free = free->next;
             mysql_close(&temp->conn);
             temp->next = nullptr;
-            ObjPool::deallocate(temp);
             connNum--;
         }
         condition.notifyAll(mutex);
@@ -135,7 +134,7 @@ MySql::~MySql() {
 }
 
 vector<vector<unordered_map<string, string>>> MySql::queryData(const string &sql) {
-    Connection* conn = getConnection();
+    shared_ptr<Connection> conn = getConnection();
     if (mysql_real_query(&conn->conn, sql.data(), sql.size()) != 0) {
         std::cerr << mysql_error(&conn->conn) << std::endl;
         freeConnection(conn);

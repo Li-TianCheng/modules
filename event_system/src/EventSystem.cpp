@@ -4,7 +4,7 @@
 
 #include "EventSystem.h"
 
-void EventSystem::registerEvent(EventKey eventType, void (*handleEvent)(void*)) {
+void EventSystem::registerEvent(EventKey eventType, void (*handleEvent)(const shared_ptr<void>&)) {
     map[eventType] = handleEvent;
 }
 
@@ -12,9 +12,8 @@ void EventSystem::unregisterEvent(EventKey eventType) {
     map.erase(eventType);
 }
 
-void EventSystem::receiveEvent(Event* e) {
+void EventSystem::receiveEvent(const shared_ptr<Event>& e) {
     if (shutdown){
-        ObjPool::deallocate(e);
         return;
     }
     mutex.lock();
@@ -22,7 +21,7 @@ void EventSystem::receiveEvent(Event* e) {
     condition.notifyAll(mutex);
 }
 
-void EventSystem::doEvent(Event* e) {
+void EventSystem::doEvent(const shared_ptr<Event>& e) {
     if (e == nullptr){
         return;
     }
@@ -31,15 +30,14 @@ void EventSystem::doEvent(Event* e) {
             map[e->eventType](e->arg);
         }
     }
-    ObjPool::deallocate(e);
 }
 
-Event* EventSystem::getEvent() {
+shared_ptr<Event> EventSystem::getEvent() {
     mutex.lock();
     while (eventQueue.empty()){
         condition.wait(mutex);
     }
-    Event* e = eventQueue.front();
+    shared_ptr<Event> e = eventQueue.front();
     eventQueue.pop();
     condition.notifyAll(mutex);
     return e;
@@ -48,7 +46,7 @@ Event* EventSystem::getEvent() {
 void EventSystem::cycle() {
     cycleInit();
     while (true) {
-        Event* e = getEvent();
+        shared_ptr<Event> e = getEvent();
         if (e->eventType == EventEndCycle){
             doEvent(e);
             break;
@@ -65,16 +63,15 @@ void EventSystem::cycleClear() {}
 
 EventSystem::~EventSystem() {
     while (!eventQueue.empty()){
-        Event* e = eventQueue.front();
-        ObjPool::deallocate(e);
+        shared_ptr<Event> e = eventQueue.front();
         eventQueue.pop();
     }
 }
 
 EventSystem::EventSystem() : shutdown(false) {}
 
-void EventSystem::cycleTask(void *arg) {
-    ((EventSystem*)arg)->cycle();
+void EventSystem::cycleTask(const shared_ptr<void>& arg) {
+    (*static_pointer_cast<EventSystem*>(arg))->cycle();
 }
 
 void EventSystem::cycleNoBlock() {
@@ -82,9 +79,9 @@ void EventSystem::cycleNoBlock() {
         return;
     }
     mutex.lock();
-    vector<Event*> temp;
+    vector<shared_ptr<Event>> temp;
     while (!eventQueue.empty()) {
-        Event* e = eventQueue.front();
+        shared_ptr<Event> e = eventQueue.front();
         temp.push_back(e);
         eventQueue.pop();
     }

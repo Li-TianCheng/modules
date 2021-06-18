@@ -15,17 +15,17 @@
 class HttpSession : public TcpSession {
 public:
     HttpSession();
-    ~HttpSession() override;
+    ~HttpSession() override = default;
     void sessionInit() override;
     void sessionClear() override;
     void handleTickerTimeOut(const string &uuid) override;
 private:
     void handleReadDone(const string& recvMsg) override;
-    void match(Http* request);
+    void match(const shared_ptr<Http>& request);
     void parse(char& c);
     string getGMTTime();
 private:
-    Http* request;
+    shared_ptr<Http> request;
     string key;
     int count;
     int status;

@@ -10,14 +10,15 @@ void TimeSystem::init() {
 }
 
 void TimeSystem::close() {
-    Event* e = ObjPool::allocate<Event>(EventEndCycle, &getTimeWheel());
+    auto arg = ObjPool::allocate<TimeWheel*>(&getTimeWheel());
+    auto e = ObjPool::allocate<Event>(EventEndCycle, arg);
     getTimeWheel().receiveEvent(e);
     getThread().join();
 }
 
-string TimeSystem::receiveEvent(EventKey eventType, Time *arg) {
+string TimeSystem::receiveEvent(EventKey eventType, const shared_ptr<Time>& arg) {
     arg->tPtr = &getTimeWheel();
-    Event* e = ObjPool::allocate<Event>(eventType, arg);
+    auto e = ObjPool::allocate<Event>(eventType, arg);
     getTimeWheel().receiveEvent(e);
     return arg->uuid;
 }

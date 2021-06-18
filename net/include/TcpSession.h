@@ -30,7 +30,7 @@ public:
     virtual void sessionClear();
     virtual void handleTickerTimeOut(const string& uuid);
     virtual void handleTimerTimeOut(const string& uuid);
-    virtual void handleReadDone(const string& recvMsg) = 0;
+    virtual void handleReadDone(const string& recvMsg);
     virtual ~TcpSession() = default;
 private:
     void resetEpollEvent();
@@ -51,9 +51,9 @@ private:
 };
 
 struct EpollEventArg {
-    Time* t;
+    shared_ptr<Time> t;
     TcpSession* session;
-    EpollEventArg(Time* t, TcpSession* session) : t(t), session(session) {};
+    EpollEventArg(const shared_ptr<Time>& t, TcpSession* session) : t(t), session(session) {};
 };
 
 struct EpollDeleteArg {

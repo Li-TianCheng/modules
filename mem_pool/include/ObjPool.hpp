@@ -5,17 +5,18 @@
 #ifndef MEMPOOL_OBJPOOL_HPP
 #define MEMPOOL_OBJPOOL_HPP
 
+#include <memory>
 #include "MemPool.h"
+
+using std::shared_ptr;
+using std::static_pointer_cast;
 
 static const int ChunkSize      = 200;
 
 class ObjPool{
 public:
     template<typename T, typename... Args>
-    static T* allocate(Args... args);
-
-    template<typename T>
-    static void deallocate(T* ptr);
+    static shared_ptr<T> allocate(Args... args);
     static void init();
     static void close();
     ObjPool() = delete;
@@ -24,13 +25,15 @@ public:
     ObjPool& operator=(const ObjPool&) = delete;
     ObjPool& operator=(ObjPool&&) = delete;
 private:
+    template<typename T>
+    static void deallocate(T* ptr);
     static MemPool& getInstance();
 };
 
 template<typename T, typename... Args> inline
-T* ObjPool::allocate(Args... args) {
+shared_ptr<T> ObjPool::allocate(Args... args) {
     void* ptr = getInstance().allocate(sizeof(T));
-    return ::new(ptr) T(args...);
+    return shared_ptr<T>(::new(ptr) T(args...), deallocate<T>);
 }
 
 template<typename T> inline

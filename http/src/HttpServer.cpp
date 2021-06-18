@@ -16,11 +16,11 @@ void HttpServer::close() {
     server.close();
 }
 
-void HttpServer::registerHandler(const string &pattern, void (*handle)(Http *, Http *)) {
+void HttpServer::registerHandler(const string &pattern, void (*handle)(const shared_ptr<Http>&, const shared_ptr<Http>&)) {
     getMux()[pattern] = handle;
 }
 
-void HttpServer::registerRegexHandler(const string &pattern, void (*handle)(Http *, Http *)) {
+void HttpServer::registerRegexHandler(const string &pattern, void (*handle)(const shared_ptr<Http>&, const shared_ptr<Http>&)) {
     getRegexMux()[pattern] = handle;
 }
 
@@ -36,12 +36,12 @@ void HttpServer::unregisterRegexHandler(const string &pattern) {
     }
 }
 
-unordered_map<string, void (*)(Http *, Http *)> &HttpServer::getRegexMux() {
-    static unordered_map<string, void(*)(Http*, Http*)> regexMux;
+unordered_map<string, void (*)(const shared_ptr<Http>&, const shared_ptr<Http>&)> &HttpServer::getRegexMux() {
+    static unordered_map<string, void(*)(const shared_ptr<Http>&, const shared_ptr<Http>&)> regexMux;
     return regexMux;
 }
 
-unordered_map<string, void (*)(Http *, Http *)> &HttpServer::getMux() {
-    static unordered_map<string, void(*)(Http*, Http*)> mux;
+unordered_map<string, void (*)(const shared_ptr<Http>&, const shared_ptr<Http>&)> &HttpServer::getMux() {
+    static unordered_map<string, void(*)(const shared_ptr<Http>&, const shared_ptr<Http>&)> mux;
     return mux;
 }

@@ -15,49 +15,42 @@ HttpSession::HttpSession() : request(nullptr), status(0), timeout(0) {
 
 }
 
-void HttpSession::match(Http* request) {
-    if (request->line["url"] == "/close") {
-        closeListen();
-    }
-    Http response(false);
-    response.line["version"] = request->line["version"];
-    response.line["status"] = "404";
-    response.line["msg"] = "NOT FOUND";
+void HttpSession::match(const shared_ptr<Http>& request) {
+    auto response = ObjPool::allocate<Http>(false);
+    response->line["version"] = request->line["version"];
+    response->line["status"] = "404";
+    response->line["msg"] = "NOT FOUND";
     if (HttpServer::getMux().find(request->line["url"]) != HttpServer::getMux().end()) {
-        response.line["status"] = "200";
-        response.line["msg"] = "OK";
-        HttpServer::getMux()[request->line["url"]](request, &response);
+        response->line["status"] = "200";
+        response->line["msg"] = "OK";
+        HttpServer::getMux()[request->line["url"]](request, response);
     } else {
         for (auto& m : HttpServer::getRegexMux()) {
             if (std::regex_match(request->head["url"], std::regex(m.first))) {
-                response.line["status"] = "200";
-                response.line["msg"] = "OK";
-                m.second(request, &response);
+                response->line["status"] = "200";
+                response->line["msg"] = "OK";
+                m.second(request, response);
                 break;
             }
         }
     }
-    response.head["Date"] = getGMTTime();
-    response.head["Content-Length"] = std::to_string(response.data.size());
+    response->head["Date"] = getGMTTime();
+    response->head["Content-Length"] = std::to_string(response->data.size());
     if (request->head["Connection"] != "keep-alive") {
-        response.head["Connection"] = "close";
+        response->head["Connection"] = "close";
     } else {
-        response.head["Connection"] = "keep-alive";
+        response->head["Connection"] = "keep-alive";
         timeout = 0;
     }
-    write(string(response));
-    if (response.head["Connection"] == "close") {
+    write(string(*response));
+    if (response->head["Connection"] == "close") {
         closeConnection();
     }
-    ObjPool::deallocate(request);
 }
 
 void HttpSession::parse(char &c) {
     switch(status) {
         case 0:{
-            if (request != nullptr) {
-                ObjPool::deallocate(request);
-            }
             request = ObjPool::allocate<Http>(true);
             status = 1;
         }
@@ -90,7 +83,6 @@ void HttpSession::parse(char &c) {
                 key = "";
                 status = 5;
             } else {
-                ObjPool::deallocate(request);
                 request = nullptr;
                 status = 0;
             }
@@ -127,7 +119,6 @@ void HttpSession::parse(char &c) {
                     status = 8;
                 }
             } else {
-                ObjPool::deallocate(request);
                 request = nullptr;
                 status = 0;
             }
@@ -146,10 +137,6 @@ void HttpSession::parse(char &c) {
         }
         default: break;
     }
-}
-
-HttpSession::~HttpSession() {
-    while (request != nullptr) {}
 }
 
 string HttpSession::getGMTTime() {

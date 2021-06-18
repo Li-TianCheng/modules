@@ -20,21 +20,21 @@ class EventSystem;
 
 struct Event{
     EventKey eventType;
-    void* arg;
-    Event(EventKey eventType, void* arg) : eventType(eventType), arg(arg){};
+    shared_ptr<void> arg;
+    Event(EventKey eventType, const shared_ptr<void>& arg) : eventType(eventType), arg(arg){};
 };
 
 class EventSystem {
 public:
     EventSystem();
-    void registerEvent(EventKey eventType, void (*handleEvent)(void*));
+    void registerEvent(EventKey eventType, void (*handleEvent)(const shared_ptr<void>&));
     void unregisterEvent(EventKey eventType);
-    void receiveEvent(Event* e);
-    void doEvent(Event* e);
-    Event* getEvent();
+    void receiveEvent(const shared_ptr<Event>& e);
+    void doEvent(const shared_ptr<Event>& e);
+    shared_ptr<Event> getEvent();
     void cycle();
     void cycleNoBlock();
-    static void cycleTask(void* arg);
+    static void cycleTask(const shared_ptr<void>&arg);
     virtual void cycleInit();
     virtual void cycleClear();
     virtual ~EventSystem();
@@ -44,8 +44,8 @@ public:
     EventSystem& operator=(EventSystem&&) = delete;
 private:
     volatile bool shutdown;
-    unordered_map<EventKey, void(*)(void*)> map;
-    queue<Event*> eventQueue;
+    unordered_map<EventKey, void(*)(const shared_ptr<void>&)> map;
+    queue<shared_ptr<Event>> eventQueue;
     Mutex mutex;
     Condition condition;
 };

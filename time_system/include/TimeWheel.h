@@ -27,19 +27,19 @@ public:
     TimeWheel& operator=(TimeWheel&&) = delete;
 private:
     void init();
-    void addTimeToWheel(EventKey e, Time* t);
+    void addTimeToWheel(EventKey e, const shared_ptr<Time>& t);
     void update();
-    static void handleTimerEvent(void* arg);
-    static void handleTickerEvent(void* arg);
-    static void handleTimerTimeOut(void* arg);
-    static void handleTickerTimeOut(void* arg);
-    static void handleEndCycle(void* arg);
+    static void handleTimerEvent(const shared_ptr<void>& arg);
+    static void handleTickerEvent(const shared_ptr<void>& arg);
+    static void handleTimerTimeOut(const shared_ptr<void>& arg);
+    static void handleTickerTimeOut(const shared_ptr<void>& arg);
+    static void handleEndCycle(const shared_ptr<void>& arg);
 private:
     unordered_set<string> toDelete;
-    vector<queue<Event*>> millisecond;
-    vector<queue<Event*>> second;
-    vector<queue<Event*>> minute;
-    vector<queue<Event*>> hour;
+    vector<queue<shared_ptr<Event>>> millisecond;
+    vector<queue<shared_ptr<Event>>> second;
+    vector<queue<shared_ptr<Event>>> minute;
+    vector<queue<shared_ptr<Event>>> hour;
     volatile bool shutdown;
     int epollFd;
     int msIter;
@@ -50,9 +50,9 @@ private:
 };
 
 struct TimeWheelEventArg {
-    Time* t;
-    Time* nextTime;
-    TimeWheelEventArg(Time* t, Time* nextTime): t(t), nextTime(nextTime) {};
+    shared_ptr<Time> t;
+    shared_ptr<Time> nextTime;
+    TimeWheelEventArg(const shared_ptr<Time>& t, const shared_ptr<Time>& nextTime): t(t), nextTime(nextTime) {};
 };
 
 #endif //TIMESYSTEM_TIMEWHEEL_H

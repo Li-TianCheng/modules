@@ -25,10 +25,10 @@ public:
     void cycleClear() override;
 private:
     void init();
-    static void handleTimeOut(void* arg);
+    static void handleTimeOut(const shared_ptr<void>& arg);
     void draw();
 private:
-    Time* updateTime;
+    shared_ptr<Time> updateTime;
     Time curr;
     string title;
     atomic<int> count;

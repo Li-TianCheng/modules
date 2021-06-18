@@ -19,12 +19,14 @@ void TcpSession::write(const string &sendMsg) {
 
 void TcpSession::closeConnection() {
     isCloseConnection = true;
-    Event* e = ObjPool::allocate<Event>(EventCloseConnection, this);
+    auto arg = ObjPool::allocate<TcpSession*>(this);
+    auto e = ObjPool::allocate<Event>(EventCloseConnection, arg);
     epoll->receiveEvent(e);
 }
 
 void TcpSession::closeListen() {
-    Event* e = ObjPool::allocate<Event>(EventCloseListen, this);
+    auto arg = ObjPool::allocate<TcpSession*>(this);
+    auto e = ObjPool::allocate<Event>(EventCloseListen, arg);
     epoll->receiveEvent(e);
 }
 
@@ -44,25 +46,25 @@ void TcpSession::sessionClear() {
 }
 
 string TcpSession::addTicker(int h, int m, int s, int ms) {
-    Time* t = ObjPool::allocate<Time>(h, m, s, ms, epoll);
-    EpollEventArg* arg = ObjPool::allocate<EpollEventArg>(t, this);
-    Event* e = ObjPool::allocate<Event>(EventTicker, arg);
+    auto t = ObjPool::allocate<Time>(h, m, s, ms, epoll);
+    auto arg = ObjPool::allocate<EpollEventArg>(t, this);
+    auto e = ObjPool::allocate<Event>(EventTicker, arg);
     epoll->receiveEvent(e);
     return t->uuid;
 }
 
 string TcpSession::addTimer(int h, int m, int s, int ms) {
-    Time* t = ObjPool::allocate<Time>(h, m, s, ms, epoll);
-    EpollEventArg* arg = ObjPool::allocate<EpollEventArg>(t, this);
-    Event* e = ObjPool::allocate<Event>(EventTimer, arg);
+    auto t = ObjPool::allocate<Time>(h, m, s, ms, epoll);
+    auto arg = ObjPool::allocate<EpollEventArg>(t, this);
+    auto e = ObjPool::allocate<Event>(EventTimer, arg);
     epoll->receiveEvent(e);
     return t->uuid;
 }
 
 void TcpSession::deleteTicker(string &uuid) {
     TimeSystem::deleteTicker(uuid);
-    EpollDeleteArg* arg = ObjPool::allocate<EpollDeleteArg>(uuid, epoll);
-    Event* e = ObjPool::allocate<Event>(EventDeleteTicker, arg);
+    auto arg = ObjPool::allocate<EpollDeleteArg>(uuid, epoll);
+    auto e = ObjPool::allocate<Event>(EventDeleteTicker, arg);
     epoll->receiveEvent(e);
 }
 
@@ -71,6 +73,10 @@ void TcpSession::handleTimerTimeOut(const string& uuid) {
 }
 
 void TcpSession::handleTickerTimeOut(const string& uuid) {
+
+}
+
+void TcpSession::handleReadDone(const string &recvMsg) {
 
 }
 

@@ -10,12 +10,12 @@ void TaskSystem::init() {
 }
 
 void TaskSystem::close() {
-    Event* e = ObjPool::allocate<Event>(EventEndCycle, nullptr);
+    auto e = ObjPool::allocate<Event>(EventEndCycle, nullptr);
     getThreadPool().receiveEvent(e);
     getThread().join();
 }
 
-void TaskSystem::addTask(void (*task)(void *), void *arg) {
+void TaskSystem::addTask(void (*task)(const shared_ptr<void>&), const shared_ptr<void>& arg) {
     getThreadPool().addTask(task, arg);
 }
 

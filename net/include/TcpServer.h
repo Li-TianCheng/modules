@@ -21,7 +21,7 @@ class TcpServer : public EventSystem {
 public:
     TcpServer(int port, AddressType addressType);
     int getServerFd();
-    void addNewSession(int fd, TcpSession* session);
+    void addNewSession(int fd, const shared_ptr<TcpSession>& session);
     bool isRunning();
     void close();
     void cycleInit() override;
@@ -69,7 +69,7 @@ int TcpServer<T>::getServerFd() {
 }
 
 template<typename T> inline
-void TcpServer<T>::addNewSession(int fd, TcpSession* session) {
+void TcpServer<T>::addNewSession(int fd, const shared_ptr<TcpSession>& session) {
     epollList[hash(fd)].addNewSession(fd, session);
 }
 
@@ -86,7 +86,7 @@ bool TcpServer<T>::isRunning() {
 template<typename T> inline
 void TcpServer<T>::close() {
     if (!isClose){
-        Event* e = ObjPool::allocate<Event>(EventEndCycle, nullptr);
+        auto e = ObjPool::allocate<Event>(EventEndCycle, nullptr);
         receiveEvent(e);
         isClose = true;
         ::shutdown(serverFd, SHUT_RD);

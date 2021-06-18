@@ -10,14 +10,15 @@ ThreadPool::ThreadPool(int initNum, int maxNum, int queueSize): initNum(initNum)
     init();
 }
 
-void ThreadPool::addTask(void (*task)(void *), void *arg) {
+void ThreadPool::addTask(void (*task)(const shared_ptr<void>&), const shared_ptr<void>&arg) {
     if (shutdown > 0){
         std::cerr << "线程池正在关闭" << std::endl;
         return;
     }
     mutex.lock();
     while(shutdown == 0 && taskQueue.size() == queueSize){
-        Event* e = ObjPool::allocate<Event>(EventIncreasePool, this);
+        auto _arg = ObjPool::allocate<ThreadPool*>(this);
+        auto e = ObjPool::allocate<Event>(EventIncreasePool, _arg);
         receiveEvent(e);
         condition.wait(mutex);
     }
@@ -26,10 +27,10 @@ void ThreadPool::addTask(void (*task)(void *), void *arg) {
 }
 
 void ThreadPool::cycleInit() {
-    Time* t = ObjPool::allocate<Time>(0, 0, 1, 0, this);
+    auto t = ObjPool::allocate<Time>(0, 0, 1, 0, this);
     uuid = TimeSystem::receiveEvent(EventTicker, t);
     for(auto& thread : threadPool){
-        ThreadPoolEventArg* arg = ObjPool::allocate<ThreadPoolEventArg>(this, &thread);
+        auto arg = new ThreadPoolEventArg(this, &thread);
         thread.run(taskRoutine, arg);
     }
 }
@@ -70,7 +71,7 @@ void ThreadPool::join() {
 void ThreadPool::cleanHandler(void *arg) {
     ((ThreadPoolEventArg*)arg)->ptr->mutex.unlock();
     ((ThreadPoolEventArg*)arg)->ptr->threadNum--;
-    ObjPool::deallocate((ThreadPoolEventArg*)arg);
+    delete (ThreadPoolEventArg*)arg;
 }
 
 void *ThreadPool::taskRoutine(void *arg) {
@@ -95,8 +96,8 @@ void *ThreadPool::taskRoutine(void *arg) {
     pthread_cleanup_pop(0);
 }
 
-void ThreadPool::handleTimeOut(void* arg) {
-    ((ThreadPool*)((Time*)arg)->ePtr)->decreasePoolSize();
+void ThreadPool::handleTimeOut(const shared_ptr<void>& arg) {
+    ((ThreadPool*)(static_pointer_cast<Time>(arg))->ePtr)->decreasePoolSize();
 }
 
 void ThreadPool::increasePoolSize() {
@@ -106,7 +107,7 @@ void ThreadPool::increasePoolSize() {
     mutex.lock();
     for (int i = 0; i < initNum/3; i++){
         threadPool.emplace_back();
-        ThreadPoolEventArg* arg = ObjPool::allocate<ThreadPoolEventArg>(this, &threadPool.back());
+        ThreadPoolEventArg* arg = new ThreadPoolEventArg(this, &threadPool.back());
         threadPool.back().run(taskRoutine, arg);
         threadNum++;
     }
@@ -135,6 +136,6 @@ void ThreadPool::decreasePoolSize() {
     mutex.unlock();
 }
 
-void ThreadPool::handleIncreasePool(void *arg) {
-    ((ThreadPool*)arg)->increasePoolSize();
+void ThreadPool::handleIncreasePool(const shared_ptr<void>& arg) {
+    (*static_pointer_cast<ThreadPool*>(arg))->increasePoolSize();
 }
