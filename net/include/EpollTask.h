@@ -35,8 +35,6 @@ public:
     void epollCycle();
     bool isRunning();
     ~EpollTask() override;
-    void addListener(epoll_event& e);
-    void delListener(epoll_event& e);
     void addNewSession(int fd, const shared_ptr<TcpSession>& session);
     void delSession(int fd);
 private:
@@ -183,18 +181,6 @@ void EpollTask<T>::handleTimer(const shared_ptr<void>& arg) {
 }
 
 template<typename T> inline
-void EpollTask<T>::addListener(epoll_event& e) {
-    e.events = Read | Err;
-    e.data.fd = server->getServerFd();
-    epoll_ctl(epollFd, EPOLL_CTL_ADD, server->getServerFd(), &e);
-}
-
-template<typename T> inline
-void EpollTask<T>::delListener(epoll_event& e) {
-    epoll_ctl(epollFd, EPOLL_CTL_DEL, server->getServerFd(), &e);
-}
-
-template<typename T> inline
 bool EpollTask<T>::isRunning() {
     return !shutdown;
 }
@@ -234,7 +220,7 @@ void EpollTask<T>::writeTask(const shared_ptr<void>& arg) {
             int sendNum = send(session->epollEvent.data.fd, session->msgQueue.front().data()+offset, session->msgQueue.front().size()-offset, MSG_DONTWAIT);
             if (sendNum <= 0) {
                 if (errno == EAGAIN) {
-                    session->msgQueue.front() = session->msgQueue.front().substr(offset);
+                    session->msgQueue.front() = std::move(session->msgQueue.front().substr(offset));
                     epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
                     session->mutex.unlock();
                     return;
@@ -273,18 +259,10 @@ void EpollTask<T>::cycleTask(const shared_ptr<void>& arg) {
                 epoll->delSession(event.data.fd);
             } else {
                 if ((event.events & Read) == Read) {
-                    if (event.data.fd == epoll->server->getServerFd()) {
-                        auto session = ObjPool::allocate<T>();
-                        int clientFd = accept(epoll->server->getServerFd(), &session->address, &session->len);
-                        if (clientFd > 0) {
-                            epoll->server->addNewSession(clientFd, session);
-                        }
-                    } else {
-                        epoll->rwLock.rdLock();
-                        auto session = epoll->sessionManager[event.data.fd];
-                        TaskSystem::addTask(readTask, session);
-                        epoll->rwLock.unlock();
-                    }
+                    epoll->rwLock.rdLock();
+                    auto session = epoll->sessionManager[event.data.fd];
+                    TaskSystem::addTask(readTask, session);
+                    epoll->rwLock.unlock();
                 }
                 if ((event.events & Write) == Write) {
                     epoll->rwLock.rdLock();

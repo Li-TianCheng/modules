@@ -20,7 +20,7 @@ static const int ReadBufferSize = 256;
 class TcpSession {
 public:
     TcpSession();
-    void write(const string &sendMsg);
+    void write(string&& sendMsg);
     void closeConnection();
     void closeListen();
     string addTicker(int h, int m, int s, int ms);
@@ -36,6 +36,8 @@ private:
     void resetEpollEvent();
     template<typename T>
     friend class EpollTask;
+    template<typename T>
+    friend class TcpServer;
 private:
     volatile bool isCloseConnection;
     volatile bool isWrite;

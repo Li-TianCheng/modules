@@ -9,7 +9,7 @@
 #include <sys/socket.h>
 #include <cstring>
 #include <unistd.h>
-#include <signal.h>
+#include <csignal>
 #include "AddressType.h"
 #include "EpollTask.h"
 
@@ -17,19 +17,21 @@ static const int EpollNum = 3;
 static const int MaxWaitNum = 5000;
 
 template<typename T>
-class TcpServer : public EventSystem {
+class TcpServer {
 public:
     TcpServer(int port, AddressType addressType);
-    int getServerFd();
-    void addNewSession(int fd, const shared_ptr<TcpSession>& session);
+    void server();
     bool isRunning();
     void close();
-    void cycleInit() override;
-    ~TcpServer() override;
+    ~TcpServer();
 private:
+    void addNewSession(int fd, const shared_ptr<TcpSession>& session);
+    void cycleInit();
     int hash(int fd);
+    static void serverCycle(const shared_ptr<void>& arg);
 private:
     int serverFd;
+    int epollFd;
     volatile bool isClose;
     EpollTask<T> epollList[EpollNum];
     epoll_event epollEvent;
@@ -60,12 +62,13 @@ TcpServer<T>::TcpServer(int port, AddressType addressType) : isClose(false) {
         e.setServer(this);
     }
     signal(SIGPIPE, SIG_IGN);
-    registerEvent(EventEndCycle, nullptr);
-}
-
-template<typename T> inline
-int TcpServer<T>::getServerFd() {
-    return serverFd;
+    epollFd = epoll_create(1);
+    if (epollFd == -1) {
+        throw std::runtime_error("epoll 申请错误");
+    }
+    epollEvent.data.fd = serverFd;
+    epollEvent.events = Read | Err;
+    epoll_ctl(epollFd, EPOLL_CTL_ADD, serverFd, &epollEvent);
 }
 
 template<typename T> inline
@@ -86,12 +89,11 @@ bool TcpServer<T>::isRunning() {
 template<typename T> inline
 void TcpServer<T>::close() {
     if (!isClose){
-        auto e = ObjPool::allocate<Event>(EventEndCycle, nullptr);
-        receiveEvent(e);
         isClose = true;
         ::shutdown(serverFd, SHUT_RD);
-        epollList[0].delListener(epollEvent);
+        epoll_ctl(epollFd, EPOLL_CTL_DEL, serverFd, &epollEvent);
         ::close(serverFd);
+        ::close(epollFd);
     }
 }
 
@@ -121,10 +123,38 @@ void TcpServer<T>::cycleInit() {
         ::close(serverFd);
         throw std::runtime_error("监听失败");
     }
-    epollList[0].addListener(epollEvent);
     for (auto& e : epollList) {
         e.epollCycle();
     }
+}
+
+template<typename T>
+void TcpServer<T>::serverCycle(const shared_ptr<void> &arg) {
+    TcpServer<T>* server = *static_pointer_cast<TcpServer<T>*>(arg);
+    server->cycleInit();
+    while (!server->isClose) {
+        epoll_event events[MaxWaitNum];
+        int num = epoll_wait(server->epollFd, events, MaxWaitNum, WaitTime);
+        for (int i = 0; i < num; i++) {
+            auto event = events[i];
+            if ((event.events & Err) == Err) {
+                server->close();
+            }
+            if ((event.events & Read) == Read) {
+                auto session = ObjPool::allocate<T>();
+                int clientFd = accept(server->serverFd, &session->address, &session->len);
+                if (clientFd > 0) {
+                    server->addNewSession(clientFd, session);
+                }
+            }
+        }
+    }
+}
+
+template<typename T>
+void TcpServer<T>::server() {
+    auto arg = ObjPool::allocate<TcpServer<T>*>(this);
+    serverCycle(arg);
 }
 
 #endif //NET_TCPSERVER_H

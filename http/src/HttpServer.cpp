@@ -9,7 +9,7 @@ HttpServer::HttpServer(int port, AddressType addressType) : server(port, address
 }
 
 void HttpServer::serve() {
-    server.cycle();
+    server.server();
 }
 
 void HttpServer::close() {

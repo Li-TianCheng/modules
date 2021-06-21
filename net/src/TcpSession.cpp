@@ -8,9 +8,9 @@ TcpSession::TcpSession() : isCloseConnection(false), isWrite(false), isRead(fals
     len = sizeof(address);
 }
 
-void TcpSession::write(const string &sendMsg) {
+void TcpSession::write(string&& sendMsg) {
     mutex.lock();
-    msgQueue.push(sendMsg);
+    msgQueue.push(std::forward<string>(sendMsg));
     isWrite = true;
     epollEvent.events |= Write;
     mutex.unlock();
