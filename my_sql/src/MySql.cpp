@@ -47,7 +47,7 @@ shared_ptr<Connection> MySql::getConnection() {
     }
     shared_ptr<Connection> conn = free;
     free = free->next;
-    condition.notifyAll(mutex);
+    condition.notify(mutex);
     return conn;
 }
 
@@ -71,7 +71,7 @@ void MySql::decreasePool() {
         temp->next = nullptr;
         connNum--;
     }
-    condition.notifyAll(mutex);
+    condition.notify(mutex);
 }
 
 void MySql::increasePool() {
@@ -91,14 +91,14 @@ void MySql::increasePool() {
         free = conn;
         connNum++;
     }
-    condition.notifyAll(mutex);
+    condition.notify(mutex);
 }
 
 void MySql::freeConnection(const shared_ptr<Connection>& conn) {
     mutex.lock();
     conn->next = free;
     free = conn;
-    condition.notifyAll(mutex);
+    condition.notify(mutex);
 }
 
 void MySql::executeSQL(const string &sql) {
@@ -128,7 +128,7 @@ MySql::~MySql() {
             temp->next = nullptr;
             connNum--;
         }
-        condition.notifyAll(mutex);
+        condition.notify(mutex);
     }
     TimeSystem::deleteTicker(uuid);
 }

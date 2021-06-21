@@ -14,7 +14,7 @@
 #include "EpollTask.h"
 
 static const int EpollNum = 3;
-static const int MaxWaitNum = 5000;
+static const int MaxWaitNum = 500;
 
 template<typename T>
 class TcpServer {

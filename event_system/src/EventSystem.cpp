@@ -18,7 +18,7 @@ void EventSystem::receiveEvent(const shared_ptr<Event>& e) {
     }
     mutex.lock();
     eventQueue.push(e);
-    condition.notifyAll(mutex);
+    condition.notify(mutex);
 }
 
 void EventSystem::doEvent(const shared_ptr<Event>& e) {
@@ -39,7 +39,7 @@ shared_ptr<Event> EventSystem::getEvent() {
     }
     shared_ptr<Event> e = eventQueue.front();
     eventQueue.pop();
-    condition.notifyAll(mutex);
+    condition.notify(mutex);
     return e;
 }
 

@@ -9,7 +9,7 @@ Latch::Latch(int num):count(num), mutex(), condition() {}
 void Latch::done() {
     mutex.lock();
     count--;
-    condition.notifyAll(mutex);
+    condition.notify(mutex);
 }
 
 void Latch::wait() {

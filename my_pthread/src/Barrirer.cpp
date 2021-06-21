@@ -18,7 +18,7 @@ void Barrier::wait(){
         if (cycleNum != -1){
             cycleNum--;
         }
-        condition.notifyAll(mutex);
+        condition.notify(mutex);
     }else{
         int cancel = 0;
         pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cancel);

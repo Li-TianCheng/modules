@@ -21,8 +21,8 @@
 using std::unordered_map;
 using std::vector;
 
-static const int WaitTime = 10;
-static const int EventNum = 2000;
+static const int WaitTime = 1;
+static const int EventNum = 20;
 
 template<typename T>
 class TcpServer;
@@ -267,7 +267,7 @@ void EpollTask<T>::cycleTask(const shared_ptr<void>& arg) {
                 if ((event.events & Write) == Write) {
                     epoll->rwLock.rdLock();
                     auto session = epoll->sessionManager[event.data.fd];
-                    TaskSystem::addTask(writeTask, session);
+                    TaskSystem::addPriorityTask(writeTask, session);
                     epoll->rwLock.unlock();
                 }
             }

@@ -21,7 +21,7 @@ void Log::log(string &&log) {
     }
     mutex.lock();
     logQueue.push(std::forward<string>(log));
-    condition.notifyAll(mutex);
+    condition.notify(mutex);
 }
 
 void *Log::task(void *arg) {
@@ -36,7 +36,7 @@ void *Log::task(void *arg) {
             temp.push_back(move(log->logQueue.front()));
             log->logQueue.pop();
         }
-        log->condition.notifyAll(log->mutex);
+        log->condition.notify(log->mutex);
         for (auto& s : temp) {
             log->file << s << std::endl;
         }

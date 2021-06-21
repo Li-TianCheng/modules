@@ -9,13 +9,14 @@
 
 static const int InitThreadNum       = 10;
 static const int MaxThreadNum        = 30;
-static const int TaskQueueSize     = 50;
+static const int TaskQueueSize     = 10;
 
 class TaskSystem {
 public:
     static void init();
     static void close();
     static void addTask(void (*task)(const shared_ptr<void>&), const shared_ptr<void>& arg);
+    static void addPriorityTask(void (*task)(const shared_ptr<void>& arg), const shared_ptr<void>&arg);
     TaskSystem(const TaskSystem&) = delete;
     TaskSystem(TaskSystem&&) = delete;
     TaskSystem& operator=(const TaskSystem&) = delete;

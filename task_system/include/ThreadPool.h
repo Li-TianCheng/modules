@@ -8,12 +8,14 @@
 #include <iostream>
 #include <atomic>
 #include <list>
+#include <deque>
 #include "event_system/include/EventSystem.h"
 #include "my_pthread/include/Condition.h"
 #include "my_pthread/include/Thread.h"
 #include "time_system/include/TimeSystem.h"
 
 using std::list;
+using std::deque;
 
 class _Thread : public Thread {
 public:
@@ -25,6 +27,7 @@ class ThreadPool: public EventSystem {
 public:
     ThreadPool(int initNum, int maxNum, int queueSize);
     void addTask(void (*task)(const shared_ptr<void>&), const shared_ptr<void>&arg);
+    void addPriorityTask(void (*task)(const shared_ptr<void>& arg), const shared_ptr<void>&arg);
     void cycleInit() override;
     void cycleClear() override;
     ThreadPool(const ThreadPool&) = delete;
@@ -58,7 +61,7 @@ private:
     volatile int shutdown;
     Condition condition;
     list<_Thread> threadPool;
-    queue<TaskNode> taskQueue;
+    deque<TaskNode> taskQueue;
 };
 
 struct ThreadPoolEventArg{

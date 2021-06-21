@@ -16,14 +16,23 @@ void ThreadPool::addTask(void (*task)(const shared_ptr<void>&), const shared_ptr
         return;
     }
     mutex.lock();
-    while(shutdown == 0 && taskQueue.size() == queueSize){
+    if (taskQueue.size() >= queueSize) {
         auto _arg = ObjPool::allocate<ThreadPool*>(this);
         auto e = ObjPool::allocate<Event>(EventIncreasePool, _arg);
         receiveEvent(e);
-        condition.wait(mutex);
     }
-    taskQueue.push(TaskNode(task, arg));
-    condition.notifyAll(mutex);
+    taskQueue.emplace_back(task, arg);
+    condition.notify(mutex);
+}
+
+void ThreadPool::addPriorityTask(void (*task)(const shared_ptr<void>& arg), const shared_ptr<void>&arg) {
+    if (shutdown > 0){
+        std::cerr << "线程池正在关闭" << std::endl;
+        return;
+    }
+    mutex.lock();
+    taskQueue.emplace_front(task, arg);
+    condition.notify(mutex);
 }
 
 void ThreadPool::cycleInit() {
@@ -85,8 +94,8 @@ void *ThreadPool::taskRoutine(void *arg) {
             }
             ((ThreadPoolEventArg*)arg)->tPtr->isBlocking = false;
             TaskNode t = curr->taskQueue.front();
-            curr->taskQueue.pop();
-            curr->condition.notifyAll(curr->mutex);
+            curr->taskQueue.pop_front();
+            curr->condition.notify(curr->mutex);
             curr->runningNum++;
             pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
             t.task(t.arg);

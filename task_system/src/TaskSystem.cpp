@@ -32,3 +32,7 @@ Thread &TaskSystem::getThread() {
 void *TaskSystem::handle(void *) {
     getThreadPool().cycle();
 }
+
+void TaskSystem::addPriorityTask(void (*task)(const shared_ptr<void> &), const shared_ptr<void> &arg) {
+    getThreadPool().addPriorityTask(task, arg);
+}
