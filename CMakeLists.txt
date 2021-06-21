@@ -21,6 +21,8 @@ add_subdirectory(http)
 
 add_subdirectory(my_sql)
 
+add_subdirectory(log)
+
 add_library(Modules Modules.h)
 
-target_link_libraries(Modules Http MySql Net Utils TaskSystem TimeSystem EventSystem MemPool MyPthread)
+target_link_libraries(Modules Log Http MySql Net Utils TaskSystem TimeSystem EventSystem MemPool MyPthread)
