@@ -10,6 +10,7 @@
 #include "http/include/Http.h"
 #include "HttpServer.h"
 #include "net/include/TcpSession.h"
+#include "net/include/Ping.h"
 
 
 class HttpSession : public TcpSession {
@@ -25,6 +26,8 @@ private:
     void parse(char& c);
     string getGMTTime();
 private:
+    Ping ping;
+    bool isFirstPing;
     shared_ptr<Http> request;
     string key;
     int count;

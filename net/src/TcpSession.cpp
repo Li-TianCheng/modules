@@ -10,7 +10,7 @@ TcpSession::TcpSession() : isCloseConnection(false), isWrite(false), isRead(fals
 
 void TcpSession::write(string&& sendMsg) {
     mutex.lock();
-    msgQueue.push(std::forward<string>(sendMsg));
+    msgQueue.emplace(std::forward<string>(sendMsg));
     isWrite = true;
     epollEvent.events |= Write;
     mutex.unlock();

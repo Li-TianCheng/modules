@@ -22,7 +22,8 @@ using std::unordered_map;
 using std::vector;
 
 static const int WaitTime = 1;
-static const int EventNum = 20;
+static const int EpollEventNum = 5000;
+static const int MaxEventNum = 1000;
 
 template<typename T>
 class TcpServer;
@@ -215,12 +216,10 @@ void EpollTask<T>::writeTask(const shared_ptr<void>& arg) {
     auto session = static_pointer_cast<TcpSession>(arg);
     session->mutex.lock();
     while (!session->msgQueue.empty()) {
-        int offset = 0;
-        while (offset != session->msgQueue.front().size()) {
-            int sendNum = send(session->epollEvent.data.fd, session->msgQueue.front().data()+offset, session->msgQueue.front().size()-offset, MSG_DONTWAIT);
+        while (session->msgQueue.front().offset != session->msgQueue.front().msg.size()) {
+            int sendNum = send(session->epollEvent.data.fd, session->msgQueue.front().msg.data()+session->msgQueue.front().offset, session->msgQueue.front().msg.size()-session->msgQueue.front().offset, MSG_DONTWAIT);
             if (sendNum <= 0) {
                 if (errno == EAGAIN) {
-                    session->msgQueue.front() = std::move(session->msgQueue.front().substr(offset));
                     epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
                     session->mutex.unlock();
                     return;
@@ -232,7 +231,7 @@ void EpollTask<T>::writeTask(const shared_ptr<void>& arg) {
                     return;
                 }
             }
-            offset += sendNum;
+            session->msgQueue.front().offset += sendNum;
         }
         session->msgQueue.pop();
     }
@@ -250,9 +249,9 @@ void EpollTask<T>::cycleTask(const shared_ptr<void>& arg) {
     EpollTask<T>* epoll = *static_pointer_cast<EpollTask<T>*>(arg);
     epoll->cycleInit();
     while (epoll->server->isRunning() || !epoll->sessionManager.empty() || !epoll->uuidToFd.empty()) {
-        epoll->cycleNoBlock();
-        epoll_event events[EventNum];
-        int num = epoll_wait(epoll->epollFd, events, EventNum, WaitTime);
+        epoll->cycleNoBlock(MaxEventNum);
+        epoll_event events[EpollEventNum];
+        int num = epoll_wait(epoll->epollFd, events, EpollEventNum, WaitTime);
         for (int i = 0; i < num; i++) {
             auto event = events[i];
             if (((event.events & RdHup) == RdHup) || ((event.events & Err) == Err) || ((event.events & Hup) == Hup)) {

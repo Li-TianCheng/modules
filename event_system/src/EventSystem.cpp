@@ -74,13 +74,13 @@ void EventSystem::cycleTask(const shared_ptr<void>& arg) {
     (*static_pointer_cast<EventSystem*>(arg))->cycle();
 }
 
-void EventSystem::cycleNoBlock() {
+void EventSystem::cycleNoBlock(int maxNum) {
     if (shutdown || eventQueue.empty()) {
         return;
     }
     mutex.lock();
     vector<shared_ptr<Event>> temp;
-    while (!eventQueue.empty()) {
+    while (!eventQueue.empty() && temp.size() < maxNum) {
         shared_ptr<Event> e = eventQueue.front();
         temp.push_back(e);
         eventQueue.pop();

@@ -11,7 +11,7 @@ void HttpSession::handleReadDone(const string &recvMsg) {
 
 }
 
-HttpSession::HttpSession() : request(nullptr), status(0), timeout(0) {
+HttpSession::HttpSession() : ping(*(sockaddr_in*)&address), isFirstPing(true), request(nullptr), status(0), timeout(0) {
 
 }
 
@@ -158,8 +158,24 @@ void HttpSession::sessionClear() {
 
 void HttpSession::handleTickerTimeOut(const string &uuid) {
     if (this->uuid == uuid) {
+        if (!isFirstPing) {
+            if (!ping.recv()) {
+                closeConnection();
+            }
+        } else {
+            isFirstPing = false;
+        }
+        ping.send();
         timeout++;
         if (timeout == 30) {
+            Http response(false);
+            response.line["version"] = "HTTP/1.1";
+            response.line["status"] = "200";
+            response.line["msg"] = "OK";
+            response.head["Connection"] = "close";
+            response.head["Date"] = getGMTTime();
+            response.head["Content-Length"] = std::to_string(response.data.size());
+            write((string)response);
             closeConnection();
         }
     }

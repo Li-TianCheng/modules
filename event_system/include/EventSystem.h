@@ -33,7 +33,7 @@ public:
     void doEvent(const shared_ptr<Event>& e);
     shared_ptr<Event> getEvent();
     void cycle();
-    void cycleNoBlock();
+    void cycleNoBlock(int maxNum);
     static void cycleTask(const shared_ptr<void>&arg);
     virtual void cycleInit();
     virtual void cycleClear();

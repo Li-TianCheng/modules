@@ -11,7 +11,15 @@ TcpClient::TcpClient(const string &address, AddressType addressType) {
     bzero(&serverAddress, sizeof(serverAddress));
     if (addressType == IPV4) {
         ((sockaddr_in*)(&serverAddress))->sin_family = PF_INET;
-        inet_pton(PF_INET, split[0].data(), &((sockaddr_in*)(&serverAddress))->sin_addr);
+        if ((inet_addr(split[0].data())) == INADDR_NONE) {
+            hostent* host = gethostbyname(address.data());
+            if (host == nullptr) {
+                throw std::runtime_error("host错误");
+            }
+            ((sockaddr_in*)(&serverAddress))->sin_addr = *(in_addr*)host->h_addr;
+        } else {
+            inet_pton(PF_INET, split[0].data(), &((sockaddr_in*)(&serverAddress))->sin_addr);
+        }
         ((sockaddr_in*)(&serverAddress))->sin_port = htons(std::stoi(split[1]));
     } else {
         ((sockaddr_in6*)(&serverAddress))->sin6_family = PF_INET6;

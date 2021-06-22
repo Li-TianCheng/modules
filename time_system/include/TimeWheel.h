@@ -15,6 +15,8 @@
 using std::vector;
 using std::unordered_set;
 
+static const int EventNum = 10000;
+
 class TimeWheel: public EventSystem {
 public:
     TimeWheel();

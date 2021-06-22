@@ -20,7 +20,7 @@ template<typename T>
 class TcpServer {
 public:
     TcpServer(int port, AddressType addressType);
-    void server();
+    void serve();
     bool isRunning();
     void close();
     ~TcpServer();
@@ -152,7 +152,7 @@ void TcpServer<T>::serverCycle(const shared_ptr<void> &arg) {
 }
 
 template<typename T>
-void TcpServer<T>::server() {
+void TcpServer<T>::serve() {
     auto arg = ObjPool::allocate<TcpServer<T>*>(this);
     serverCycle(arg);
 }

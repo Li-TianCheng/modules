@@ -17,6 +17,12 @@ using std::string;
 
 static const int ReadBufferSize = 256;
 
+struct Msg {
+    string msg;
+    int offset;
+    explicit Msg(string&& msg) : msg(std::forward<string>(msg)), offset(0) {}
+};
+
 class TcpSession {
 public:
     TcpSession();
@@ -38,11 +44,11 @@ private:
     friend class EpollTask;
     template<typename T>
     friend class TcpServer;
-private:
+protected:
     volatile bool isCloseConnection;
     volatile bool isWrite;
     volatile bool isRead;
-    queue<string> msgQueue;
+    queue<Msg> msgQueue;
     Mutex mutex;
     EventSystem* epoll;
     int epollFd;

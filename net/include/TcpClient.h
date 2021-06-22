@@ -9,6 +9,7 @@
 #include <vector>
 #include <netinet/in.h>
 #include <string>
+#include <netdb.h>
 #include <arpa/inet.h>
 #include <stdexcept>
 #include <unistd.h>
