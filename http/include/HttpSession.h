@@ -26,7 +26,7 @@ private:
     void parse(char& c);
     string getGMTTime();
 private:
-    Ping ping;
+    shared_ptr<Ping> ping;
     bool isFirstPing;
     shared_ptr<Http> request;
     string key;

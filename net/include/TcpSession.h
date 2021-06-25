@@ -31,7 +31,7 @@ public:
     void closeListen();
     string addTicker(int h, int m, int s, int ms);
     string addTimer(int h, int m, int s, int ms);
-    void deleteTicker(string& uuid);
+    void deleteTicker(const string& uuid);
     virtual void sessionInit();
     virtual void sessionClear();
     virtual void handleTickerTimeOut(const string& uuid);

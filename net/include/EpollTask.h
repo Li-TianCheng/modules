@@ -23,7 +23,6 @@ using std::vector;
 
 static const int WaitTime = 1;
 static const int EpollEventNum = 5000;
-static const int MaxEventNum = 1000;
 
 template<typename T>
 class TcpServer;
@@ -31,15 +30,16 @@ class TcpServer;
 template<typename T>
 class EpollTask : public EventSystem {
 public:
-    EpollTask();
-    void setServer(TcpServer<T>* server);
-    void epollCycle();
+    explicit EpollTask(TcpServer<T>* server);
     bool isRunning();
     ~EpollTask() override;
     void addNewSession(int fd, const shared_ptr<TcpSession>& session);
     void delSession(int fd);
+    int getNum();
+    void close();
 private:
     void init();
+    void epollCycle();
     static void cycleTask(const shared_ptr<void>& arg);
     static void handleTickerTimeOut(const shared_ptr<void>& arg);
     static void handleTimerTimeOut(const shared_ptr<void>& arg);
@@ -51,7 +51,8 @@ private:
     static void handleCloseConnection(const shared_ptr<void>& arg);
     static void handleCloseListen(const shared_ptr<void>& arg);
 private:
-    bool shutdown;
+    volatile bool needClose;
+    volatile bool running;
     RwLock rwLock;
     int epollFd;
     TcpServer<T>* server;
@@ -60,17 +61,20 @@ private:
 };
 
 template<typename T> inline
-EpollTask<T>::EpollTask() : shutdown(false) {
+EpollTask<T>::EpollTask(TcpServer<T>* server) : running(false), server(server), needClose(false) {
     epollFd = epoll_create(1);
     if (epollFd == -1) {
         throw std::runtime_error("epoll 申请错误");
     }
     init();
+    epollCycle();
 }
 
 template<typename T> inline
 EpollTask<T>::~EpollTask() {
-    while (!sessionManager.empty() || !uuidToFd.empty()){}
+    while (running){
+        close();
+    }
     ::close(epollFd);
 }
 
@@ -183,7 +187,7 @@ void EpollTask<T>::handleTimer(const shared_ptr<void>& arg) {
 
 template<typename T> inline
 bool EpollTask<T>::isRunning() {
-    return !shutdown;
+    return running;
 }
 
 template<typename T> inline
@@ -247,9 +251,16 @@ void EpollTask<T>::writeTask(const shared_ptr<void>& arg) {
 template<typename T> inline
 void EpollTask<T>::cycleTask(const shared_ptr<void>& arg) {
     EpollTask<T>* epoll = *static_pointer_cast<EpollTask<T>*>(arg);
+    epoll->running = true;
     epoll->cycleInit();
-    while (epoll->server->isRunning() || !epoll->sessionManager.empty() || !epoll->uuidToFd.empty()) {
-        epoll->cycleNoBlock(MaxEventNum);
+    while (true) {
+        epoll->rwLock.rdLock();
+        if (epoll->needClose && epoll->sessionManager.empty() && epoll->uuidToFd.empty()) {
+            epoll->rwLock.unlock();
+            break;
+        }
+        epoll->rwLock.unlock();
+        epoll->cycleNoBlock(-1);
         epoll_event events[EpollEventNum];
         int num = epoll_wait(epoll->epollFd, events, EpollEventNum, WaitTime);
         for (int i = 0; i < num; i++) {
@@ -274,12 +285,7 @@ void EpollTask<T>::cycleTask(const shared_ptr<void>& arg) {
     }
     auto e = ObjPool::allocate<Event>(EventEndCycle, nullptr);
     epoll->receiveEvent(e);
-    epoll->shutdown = true;
-}
-
-template<typename T> inline
-void EpollTask<T>::setServer(TcpServer<T> *server) {
-    this->server = server;
+    epoll->running = false;
 }
 
 template<typename T> inline
@@ -295,6 +301,19 @@ template<typename T> inline
 void EpollTask<T>::handleCloseListen(const shared_ptr<void>& arg) {
     auto session = *static_pointer_cast<TcpSession*>(arg);
     ((EpollTask<T>*)session->epoll)->server->close();
+}
+
+template<typename T>
+int EpollTask<T>::getNum() {
+    rwLock.rdLock();
+    int num = sessionManager.size();
+    rwLock.unlock();
+    return num;
+}
+
+template<typename T>
+void EpollTask<T>::close() {
+    needClose = true;
 }
 
 #endif //NET_EPOLLTASK_H

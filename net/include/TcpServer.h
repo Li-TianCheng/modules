@@ -13,8 +13,11 @@
 #include "AddressType.h"
 #include "EpollTask.h"
 
-static const int EpollNum = 3;
+static const int CheckTime = 1000;
+static const int MaxEpollNum = 10;
 static const int MaxWaitNum = 500;
+static const int IncreaseSessionNum = 1000;
+static const int DecreaseAvgNum = IncreaseSessionNum / MaxEpollNum;
 
 template<typename T>
 class TcpServer {
@@ -27,20 +30,19 @@ public:
 private:
     void addNewSession(int fd, const shared_ptr<TcpSession>& session);
     void cycleInit();
-    int hash(int fd);
     static void serverCycle(const shared_ptr<void>& arg);
 private:
     int serverFd;
     int epollFd;
     volatile bool isClose;
-    EpollTask<T> epollList[EpollNum];
+    list<EpollTask<T>> epollList;
+    typename list<EpollTask<T>>::iterator waitCLose;
     epoll_event epollEvent;
     sockaddr serverAddress;
 };
 
-
 template<typename T> inline
-TcpServer<T>::TcpServer(int port, AddressType addressType) : isClose(false) {
+TcpServer<T>::TcpServer(int port, AddressType addressType) : isClose(false), waitCLose(epollList.end()) {
     serverFd = socket(addressType, SOCK_STREAM, 0);
     int reuse = 1;
     setsockopt(serverFd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
@@ -58,9 +60,7 @@ TcpServer<T>::TcpServer(int port, AddressType addressType) : isClose(false) {
         ::close(serverFd);
         throw std::runtime_error("listener创建失败");
     }
-    for (auto& e : epollList) {
-        e.setServer(this);
-    }
+    epollList.emplace_back(this);
     signal(SIGPIPE, SIG_IGN);
     epollFd = epoll_create(1);
     if (epollFd == -1) {
@@ -73,12 +73,52 @@ TcpServer<T>::TcpServer(int port, AddressType addressType) : isClose(false) {
 
 template<typename T> inline
 void TcpServer<T>::addNewSession(int fd, const shared_ptr<TcpSession>& session) {
-    epollList[hash(fd)].addNewSession(fd, session);
-}
-
-template<typename T> inline
-int TcpServer<T>::hash(int fd) {
-    return std::hash<int>()(fd) % EpollNum;
+    if (waitCLose != epollList.end() && waitCLose->getNum() == 0) {
+        waitCLose->close();
+        epollList.erase(waitCLose);
+        waitCLose = epollList.end();
+    }
+    int min = INT32_MAX;
+    typename list<EpollTask<T>>::iterator minIter = epollList.end();
+    int sum = 0;
+    for (auto i = epollList.begin(); i != epollList.end(); ++i) {
+        int num = i->getNum();
+        sum += num;
+        if (num <= min) {
+            min = num;
+            minIter = i;
+        }
+    }
+    int second = INT32_MAX;
+    typename list<EpollTask<T>>::iterator tarIter = epollList.end();
+    for (auto i = epollList.begin(); i != epollList.end(); i++) {
+        if (i == minIter) {
+            continue;
+        }
+        int num = i->getNum();
+        if (num <= second) {
+            second = num;
+            tarIter = i;
+        }
+    }
+    if (waitCLose != epollList.end() && epollList.size() > 1) {
+        waitCLose = minIter;
+        if (fd != -1) {
+            tarIter->addNewSession(fd, session);
+        }
+        if (second+1 >= IncreaseSessionNum && epollList.size() < MaxEpollNum) {
+            waitCLose = epollList.end();
+        }
+    } else {
+        if (fd != -1) {
+            minIter->addNewSession(fd, session);
+        }
+        if (min+1 >= IncreaseSessionNum && epollList.size() < MaxEpollNum) {
+            epollList.emplace_back(this);
+        } else if (epollList.size() > 1 && sum / epollList.size() < DecreaseAvgNum) {
+            waitCLose = minIter;
+        }
+    }
 }
 
 template<typename T> inline
@@ -102,6 +142,9 @@ TcpServer<T>::~TcpServer() {
     if (!isClose){
         ::close(serverFd);
     }
+    for (auto& e : epollList) {
+        e.close();
+    }
     while (true){
         bool flag = true;
         for (auto& e : epollList) {
@@ -123,9 +166,6 @@ void TcpServer<T>::cycleInit() {
         ::close(serverFd);
         throw std::runtime_error("监听失败");
     }
-    for (auto& e : epollList) {
-        e.epollCycle();
-    }
 }
 
 template<typename T>
@@ -134,7 +174,10 @@ void TcpServer<T>::serverCycle(const shared_ptr<void> &arg) {
     server->cycleInit();
     while (!server->isClose) {
         epoll_event events[MaxWaitNum];
-        int num = epoll_wait(server->epollFd, events, MaxWaitNum, WaitTime);
+        int num = epoll_wait(server->epollFd, events, MaxWaitNum, CheckTime);
+        if (num <= 0) {
+            server->addNewSession(-1, nullptr);
+        }
         for (int i = 0; i < num; i++) {
             auto event = events[i];
             if ((event.events & Err) == Err) {

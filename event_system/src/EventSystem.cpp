@@ -80,7 +80,7 @@ void EventSystem::cycleNoBlock(int maxNum) {
     }
     mutex.lock();
     vector<shared_ptr<Event>> temp;
-    while (!eventQueue.empty() && temp.size() < maxNum) {
+    while (!eventQueue.empty() && (maxNum < 0 || temp.size() < maxNum)) {
         shared_ptr<Event> e = eventQueue.front();
         temp.push_back(e);
         eventQueue.pop();

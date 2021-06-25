@@ -99,7 +99,7 @@ void *TimeWheel::timeWheelCycle(void *arg) {
     TimeWheel* t = (TimeWheel*)arg;
     t->cycleInit();
     while (!t->shutdown) {
-        t->cycleNoBlock(EventNum);
+        t->cycleNoBlock(-1);
         epoll_wait(t->epollFd, nullptr, 1, 1);
         t->update();
     }

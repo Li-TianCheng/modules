@@ -11,8 +11,8 @@ void HttpSession::handleReadDone(const string &recvMsg) {
 
 }
 
-HttpSession::HttpSession() : ping(*(sockaddr_in*)&address), isFirstPing(true), request(nullptr), status(0), timeout(0) {
-
+HttpSession::HttpSession() : isFirstPing(true), request(nullptr), status(0), timeout(0) {
+    ping = ObjPool::allocate<Ping>(*(sockaddr_in*)&address);
 }
 
 void HttpSession::match(const shared_ptr<Http>& request) {
@@ -159,13 +159,13 @@ void HttpSession::sessionClear() {
 void HttpSession::handleTickerTimeOut(const string &uuid) {
     if (this->uuid == uuid) {
         if (!isFirstPing) {
-            if (!ping.recv()) {
+            if (!ping->recv()) {
                 closeConnection();
             }
         } else {
             isFirstPing = false;
         }
-        ping.send();
+        ping->send();
         timeout++;
         if (timeout == 30) {
             Http response(false);

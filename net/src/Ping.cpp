@@ -55,7 +55,7 @@ bool Ping::recv() {
     }
     icmp* p = (icmp*)(readBuff + ipLen);
     if (strcmp(inet_ntoa(remote.sin_addr), "127.0.0.1") == 0) {
-        recv();
+        recvfrom(fd, readBuff, sizeof(readBuff), MSG_DONTWAIT, (sockaddr*)&remote, &len);
         return true;
     }
     if (p->icmp_type == ICMP_ECHOREPLY && p->icmp_id == getpid() && inet_ntoa(address.sin_addr) == inet_ntoa(remote.sin_addr)) {
@@ -70,10 +70,11 @@ bool Ping::send() {
     p->icmp_code = 0;
     p->icmp_seq = 0;
     p->icmp_id = getpid();
+    p->icmp_cksum = 0;
     timeval* time = (timeval*)p->icmp_data;
     gettimeofday(time, nullptr);
     p->icmp_cksum = check(writeBuff);
-    if ((sendto(fd, writeBuff, sizeof(writeBuff), 0, (sockaddr*)&address, sizeof(address))) < 0) {
+    if ((::sendto(fd, writeBuff, sizeof(writeBuff), 0, (sockaddr*)&address, sizeof(address))) < 0) {
         return false;
     }
     return true;
