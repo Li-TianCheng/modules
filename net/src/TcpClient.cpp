@@ -12,7 +12,7 @@ TcpClient::TcpClient(const string &address, AddressType addressType) {
     if (addressType == IPV4) {
         ((sockaddr_in*)(&serverAddress))->sin_family = PF_INET;
         if ((inet_addr(split[0].data())) == INADDR_NONE) {
-            hostent* host = gethostbyname(address.data());
+            hostent* host = gethostbyname(split[0].data());
             if (host == nullptr) {
                 throw std::runtime_error("host错误");
             }
