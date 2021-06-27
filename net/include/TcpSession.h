@@ -44,9 +44,9 @@ private:
     template<typename T>
     friend class TcpServer;
 protected:
-    volatile bool isCloseConnection;
-    volatile bool isWrite;
-    volatile bool isRead;
+    std::atomic<bool> isCloseConnection;
+    std::atomic<bool> isWrite;
+    std::atomic<bool> isRead;
     queue<Msg> msgQueue;
     Mutex mutex;
     EventSystem* epoll;

@@ -5,6 +5,7 @@
 #ifndef MYPTHREAD_BARRIER_H
 #define MYPTHREAD_BARRIER_H
 
+#include <atomic>
 #include "Condition.h"
 
 class Barrier {
@@ -19,7 +20,7 @@ private:
     Mutex mutex;
     Condition condition;
     const int threadNum;
-    volatile int cycleNum;
+    std::atomic<int> cycleNum;
     int counter;
 };
 

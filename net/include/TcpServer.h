@@ -34,7 +34,7 @@ private:
 private:
     int serverFd;
     int epollFd;
-    volatile bool isClose;
+    std::atomic<bool> isClose;
     list<EpollTask<T>> epollList;
     typename list<EpollTask<T>>::iterator waitCLose;
     epoll_event epollEvent;
@@ -134,6 +134,9 @@ void TcpServer<T>::close() {
         epoll_ctl(epollFd, EPOLL_CTL_DEL, serverFd, &epollEvent);
         ::close(serverFd);
         ::close(epollFd);
+        for (auto& e : epollList) {
+            e.close();
+        }
     }
 }
 

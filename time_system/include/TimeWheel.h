@@ -40,7 +40,7 @@ private:
     vector<queue<shared_ptr<Event>>> second;
     vector<queue<shared_ptr<Event>>> minute;
     vector<queue<shared_ptr<Event>>> hour;
-    volatile bool shutdown;
+    std::atomic<bool> shutdown;
     int epollFd;
     int msIter;
     int sIter;

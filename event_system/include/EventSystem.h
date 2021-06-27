@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <string>
 #include <queue>
+#include <atomic>
 #include "mem_pool/include/ObjPool.hpp"
 #include "my_pthread/include/Condition.h"
 #include "EventKey.h"
@@ -43,7 +44,7 @@ public:
     EventSystem& operator=(const EventSystem&) = delete;
     EventSystem& operator=(EventSystem&&) = delete;
 private:
-    volatile bool shutdown;
+    std::atomic<bool> shutdown;
     unordered_map<EventKey, void(*)(const shared_ptr<void>&)> map;
     queue<shared_ptr<Event>> eventQueue;
     Mutex mutex;

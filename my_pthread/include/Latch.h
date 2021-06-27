@@ -5,6 +5,7 @@
 #ifndef MYPTHREAD_LATCH_H
 #define MYPTHREAD_LATCH_H
 
+#include <atomic>
 #include "Mutex.h"
 #include "Condition.h"
 
@@ -18,7 +19,7 @@ public:
     Latch& operator=(const Latch&) = delete;
     Latch& operator=(Latch&&) = delete;
 private:
-    volatile int count;
+    std::atomic<int> count;
     Mutex mutex;
     Condition condition;
 };

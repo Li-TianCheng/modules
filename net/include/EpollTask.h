@@ -49,8 +49,8 @@ private:
     static void handleCloseConnection(const shared_ptr<void>& arg);
     static void handleCloseListen(const shared_ptr<void>& arg);
 private:
-    volatile bool needClose;
-    volatile bool running;
+    std::atomic<bool> needClose;
+    std::atomic<bool> running;
     std::atomic<int> num;
     int epollFd;
     TcpServer<T>* server;
@@ -212,7 +212,8 @@ void EpollTask<T>::writeTask(const shared_ptr<void>& arg) {
             int sendNum = send(session->epollEvent.data.fd, session->msgQueue.front().msg.data()+session->msgQueue.front().offset, session->msgQueue.front().msg.size()-session->msgQueue.front().offset, MSG_DONTWAIT);
             if (sendNum <= 0) {
                 if (errno == EAGAIN) {
-                    epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
+                    session->isWrite = false;
+                    session->resetEpollEvent();
                     session->mutex.unlock();
                     return;
                 } else {
@@ -269,10 +270,12 @@ void EpollTask<T>::cycleTask(const shared_ptr<void>& arg) {
 template<typename T> inline
 void EpollTask<T>::handleCloseConnection(const shared_ptr<void>& arg) {
     auto session = *static_pointer_cast<TcpSession*>(arg);
-    if (!session->isWrite) {
+    session->mutex.lock();
+    if (session->msgQueue.empty()) {
         ::shutdown(session->epollEvent.data.fd, SHUT_RD);
         session->resetEpollEvent();
     }
+    session->mutex.unlock();
 }
 
 template<typename T> inline

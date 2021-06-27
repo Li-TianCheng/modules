@@ -9,19 +9,27 @@ TcpSession::TcpSession() : isCloseConnection(false), isWrite(false), isRead(fals
 }
 
 void TcpSession::write(string&& sendMsg) {
+    if (isCloseConnection) {
+        return;
+    }
     mutex.lock();
     msgQueue.emplace(std::forward<string>(sendMsg));
     isWrite = true;
     epollEvent.events |= Write;
+    isWrite = false;
+    resetEpollEvent();
     mutex.unlock();
-    epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent);
 }
 
 void TcpSession::closeConnection() {
     isCloseConnection = true;
-    auto arg = ObjPool::allocate<TcpSession*>(this);
-    auto e = ObjPool::allocate<Event>(EventCloseConnection, arg);
-    epoll->receiveEvent(e);
+    mutex.lock();
+    if (msgQueue.empty()) {
+        auto arg = ObjPool::allocate<TcpSession*>(this);
+        auto e = ObjPool::allocate<Event>(EventCloseConnection, arg);
+        epoll->receiveEvent(e);
+    }
+    mutex.unlock();
 }
 
 void TcpSession::closeListen() {

@@ -58,7 +58,7 @@ private:
     const int queueSize;
     const int initNum;
     const int maxNum;
-    volatile int shutdown;
+    std::atomic<int> shutdown;
     Condition condition;
     list<_Thread> threadPool;
     deque<TaskNode> taskQueue;

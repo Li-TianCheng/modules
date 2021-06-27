@@ -54,7 +54,7 @@ private:
     shared_ptr<Time> checkTime;
     string uuid;
     Mutex mutex;
-    volatile int connNum;
+    std::atomic<int> connNum;
     Condition condition;
 };
 

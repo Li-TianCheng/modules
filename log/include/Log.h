@@ -11,6 +11,7 @@
 #include <queue>
 #include <sys/time.h>
 #include <vector>
+#include <atomic>
 #include "my_pthread/include/Condition.h"
 #include "my_pthread/include/Thread.h"
 
@@ -58,7 +59,7 @@ private:
     static void* task(void* arg);
 private:
     std::ofstream file;
-    volatile bool isClose;
+    std::atomic<bool> isClose;
     Mutex mutex;
     Condition condition;
     queue<string> logQueue;
