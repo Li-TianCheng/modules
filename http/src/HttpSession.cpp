@@ -153,7 +153,7 @@ void HttpSession::sessionInit() {
 }
 
 void HttpSession::sessionClear() {
-    deleteTicker(uuid);
+
 }
 
 void HttpSession::handleTickerTimeOut(const string &uuid) {

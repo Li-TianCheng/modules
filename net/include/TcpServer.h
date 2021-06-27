@@ -16,8 +16,8 @@
 static const int CheckTime = 1000;
 static const int MaxEpollNum = 10;
 static const int MaxWaitNum = 500;
-static const int IncreaseSessionNum = 1000;
-static const int DecreaseAvgNum = IncreaseSessionNum / MaxEpollNum;
+static const int IncreaseEventNum = 2000;
+static const int DecreaseAvgNum = IncreaseEventNum / MaxEpollNum;
 
 template<typename T>
 class TcpServer {
@@ -106,14 +106,14 @@ void TcpServer<T>::addNewSession(int fd, const shared_ptr<TcpSession>& session) 
         if (fd != -1) {
             tarIter->addNewSession(fd, session);
         }
-        if (second+1 >= IncreaseSessionNum && epollList.size() < MaxEpollNum) {
+        if (second+1 >= IncreaseEventNum && epollList.size() < MaxEpollNum) {
             waitCLose = epollList.end();
         }
     } else {
         if (fd != -1) {
             minIter->addNewSession(fd, session);
         }
-        if (min+1 >= IncreaseSessionNum && epollList.size() < MaxEpollNum) {
+        if (min+1 >= IncreaseEventNum && epollList.size() < MaxEpollNum) {
             epollList.emplace_back(this);
         } else if (epollList.size() > 1 && sum / epollList.size() < DecreaseAvgNum) {
             waitCLose = minIter;

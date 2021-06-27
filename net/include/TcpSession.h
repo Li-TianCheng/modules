@@ -31,7 +31,6 @@ public:
     void closeListen();
     string addTicker(int h, int m, int s, int ms);
     string addTimer(int h, int m, int s, int ms);
-    void deleteTicker(const string& uuid);
     virtual void sessionInit();
     virtual void sessionClear();
     virtual void handleTickerTimeOut(const string& uuid);
@@ -62,12 +61,6 @@ struct EpollEventArg {
     shared_ptr<Time> t;
     TcpSession* session;
     EpollEventArg(const shared_ptr<Time>& t, TcpSession* session) : t(t), session(session) {};
-};
-
-struct EpollDeleteArg {
-    string uuid;
-    EventSystem* epoll;
-    EpollDeleteArg(string& uuid, EventSystem* epoll) : uuid(uuid), epoll(epoll) {};
 };
 
 #endif //NET_TCPSESSION_H

@@ -61,13 +61,6 @@ string TcpSession::addTimer(int h, int m, int s, int ms) {
     return t->uuid;
 }
 
-void TcpSession::deleteTicker(const string &uuid) {
-    TimeSystem::deleteTicker(uuid);
-    auto arg = ObjPool::allocate<EpollDeleteArg>(uuid, epoll);
-    auto e = ObjPool::allocate<Event>(EventDeleteTicker, arg);
-    epoll->receiveEvent(e);
-}
-
 void TcpSession::handleTimerTimeOut(const string& uuid) {
 
 }
