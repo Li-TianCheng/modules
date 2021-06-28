@@ -40,6 +40,7 @@ void HttpSession::match(shared_ptr<Http> request) {
         response->head["Connection"] = "close";
     } else {
         response->head["Connection"] = "keep-alive";
+        response->head["Keep-Alive"] = "timeout=30";
         timeout = 0;
     }
     write(string(*response));
@@ -168,14 +169,6 @@ void HttpSession::handleTickerTimeOut(const string &uuid) {
         ping->send();
         timeout++;
         if (timeout == 30) {
-            Http response(false);
-            response.line["version"] = "HTTP/1.1";
-            response.line["status"] = "200";
-            response.line["msg"] = "OK";
-            response.head["Connection"] = "close";
-            response.head["Date"] = getGMTTime();
-            response.head["Content-Length"] = std::to_string(response.data.size());
-            write((string)response);
             closeConnection();
         }
     }
