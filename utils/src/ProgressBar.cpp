@@ -28,7 +28,7 @@ void ProgressBar::init() {
     registerEvent(EventTickerTimeOut, handleTimeOut);
 }
 
-void ProgressBar::handleTimeOut(const shared_ptr<void>& arg) {
+void ProgressBar::handleTimeOut(shared_ptr<void> arg) {
     ((ProgressBar*)(static_pointer_cast<Time>(arg))->ePtr)->draw();
 }
 

@@ -26,8 +26,8 @@ public:
 class ThreadPool: public EventSystem {
 public:
     ThreadPool(int initNum, int maxNum, int queueSize);
-    void addTask(void (*task)(const shared_ptr<void>&), const shared_ptr<void>&arg);
-    void addPriorityTask(void (*task)(const shared_ptr<void>& arg), const shared_ptr<void>&arg);
+    void addTask(void (*task)(shared_ptr<void>), shared_ptr<void> arg);
+    void addPriorityTask(void (*task)(shared_ptr<void> arg), shared_ptr<void> arg);
     void cycleInit() override;
     void cycleClear() override;
     ThreadPool(const ThreadPool&) = delete;
@@ -43,13 +43,13 @@ private:
     void join();
     static void cleanHandler(void* arg);
     static void* taskRoutine(void* arg);
-    static void handleTimeOut(const shared_ptr<void>& arg);
-    static void handleIncreasePool(const shared_ptr<void>& arg);
+    static void handleTimeOut(shared_ptr<void> arg);
+    static void handleIncreasePool(shared_ptr<void> arg);
 private:
     struct TaskNode{
-        void (*task)(const shared_ptr<void>&);
+        void (*task)(shared_ptr<void>);
         shared_ptr<void> arg;
-        TaskNode(void (*task)(const shared_ptr<void>&), const shared_ptr<void>& arg):task(task), arg(arg){};
+        TaskNode(void (*task)(shared_ptr<void>), shared_ptr<void> arg):task(task), arg(arg){};
     };
     string uuid;
     Mutex mutex;

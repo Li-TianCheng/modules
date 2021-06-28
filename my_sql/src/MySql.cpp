@@ -20,7 +20,7 @@ void MySql::cycleClear() {
     TimeSystem::deleteTicker(uuid);
 }
 
-void MySql::handleTimeOut(const shared_ptr<void>& arg) {
+void MySql::handleTimeOut(shared_ptr<void> arg) {
     ((MySql*)(static_pointer_cast<Time>(arg))->ePtr)->decreasePool();
 }
 
@@ -51,7 +51,7 @@ shared_ptr<Connection> MySql::getConnection() {
     return conn;
 }
 
-void MySql::handleIncreasePool(const shared_ptr<void>& arg) {
+void MySql::handleIncreasePool(shared_ptr<void> arg) {
     (*static_pointer_cast<MySql*>(arg))->increasePool();
 }
 
@@ -94,7 +94,7 @@ void MySql::increasePool() {
     condition.notify(mutex);
 }
 
-void MySql::freeConnection(const shared_ptr<Connection>& conn) {
+void MySql::freeConnection(shared_ptr<Connection> conn) {
     mutex.lock();
     conn->next = free;
     free = conn;

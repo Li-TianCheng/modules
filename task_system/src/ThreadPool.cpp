@@ -10,7 +10,7 @@ ThreadPool::ThreadPool(int initNum, int maxNum, int queueSize): initNum(initNum)
     init();
 }
 
-void ThreadPool::addTask(void (*task)(const shared_ptr<void>&), const shared_ptr<void>&arg) {
+void ThreadPool::addTask(void (*task)(shared_ptr<void>), shared_ptr<void> arg) {
     if (shutdown > 0){
         std::cerr << "线程池正在关闭" << std::endl;
         return;
@@ -25,7 +25,7 @@ void ThreadPool::addTask(void (*task)(const shared_ptr<void>&), const shared_ptr
     condition.notify(mutex);
 }
 
-void ThreadPool::addPriorityTask(void (*task)(const shared_ptr<void>& arg), const shared_ptr<void>&arg) {
+void ThreadPool::addPriorityTask(void (*task)(shared_ptr<void> arg), shared_ptr<void> arg) {
     if (shutdown > 0){
         std::cerr << "线程池正在关闭" << std::endl;
         return;
@@ -105,7 +105,7 @@ void *ThreadPool::taskRoutine(void *arg) {
     pthread_cleanup_pop(0);
 }
 
-void ThreadPool::handleTimeOut(const shared_ptr<void>& arg) {
+void ThreadPool::handleTimeOut(shared_ptr<void> arg) {
     ((ThreadPool*)(static_pointer_cast<Time>(arg))->ePtr)->decreasePoolSize();
 }
 
@@ -145,6 +145,6 @@ void ThreadPool::decreasePoolSize() {
     mutex.unlock();
 }
 
-void ThreadPool::handleIncreasePool(const shared_ptr<void>& arg) {
+void ThreadPool::handleIncreasePool(shared_ptr<void> arg) {
     (*static_pointer_cast<ThreadPool*>(arg))->increasePoolSize();
 }

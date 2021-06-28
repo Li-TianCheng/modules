@@ -15,7 +15,7 @@ void TaskSystem::close() {
     getThread().join();
 }
 
-void TaskSystem::addTask(void (*task)(const shared_ptr<void>&), const shared_ptr<void>& arg) {
+void TaskSystem::addTask(void (*task)(shared_ptr<void>), shared_ptr<void> arg) {
     getThreadPool().addTask(task, arg);
 }
 
@@ -33,6 +33,6 @@ void *TaskSystem::handle(void *) {
     getThreadPool().cycle();
 }
 
-void TaskSystem::addPriorityTask(void (*task)(const shared_ptr<void> &), const shared_ptr<void> &arg) {
+void TaskSystem::addPriorityTask(void (*task)(shared_ptr<void>), shared_ptr<void> arg) {
     getThreadPool().addPriorityTask(task, arg);
 }

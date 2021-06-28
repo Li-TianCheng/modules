@@ -15,8 +15,8 @@ class TaskSystem {
 public:
     static void init();
     static void close();
-    static void addTask(void (*task)(const shared_ptr<void>&), const shared_ptr<void>& arg);
-    static void addPriorityTask(void (*task)(const shared_ptr<void>& arg), const shared_ptr<void>&arg);
+    static void addTask(void (*task)(shared_ptr<void>), shared_ptr<void> arg);
+    static void addPriorityTask(void (*task)(shared_ptr<void> arg), shared_ptr<void> arg);
     TaskSystem(const TaskSystem&) = delete;
     TaskSystem(TaskSystem&&) = delete;
     TaskSystem& operator=(const TaskSystem&) = delete;

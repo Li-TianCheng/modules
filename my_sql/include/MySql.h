@@ -37,13 +37,13 @@ public:
     ~MySql() override;
 private:
     shared_ptr<Connection> getConnection();
-    void freeConnection(const shared_ptr<Connection>& conn);
+    void freeConnection(shared_ptr<Connection> conn);
     void increasePool();
     void decreasePool();
     void init();
     void cycleClear() override;
-    static void handleTimeOut(const shared_ptr<void>& arg);
-    static void handleIncreasePool(const shared_ptr<void>& arg);
+    static void handleTimeOut(shared_ptr<void> arg);
+    static void handleIncreasePool(shared_ptr<void> arg);
 private:
     const string userName;
     const string password;

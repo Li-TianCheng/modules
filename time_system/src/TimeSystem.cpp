@@ -16,7 +16,7 @@ void TimeSystem::close() {
     getThread().join();
 }
 
-string TimeSystem::receiveEvent(EventKey eventType, const shared_ptr<Time>& arg) {
+string TimeSystem::receiveEvent(EventKey eventType, shared_ptr<Time> arg) {
     arg->tPtr = &getTimeWheel();
     auto e = ObjPool::allocate<Event>(eventType, arg);
     getTimeWheel().receiveEvent(e);

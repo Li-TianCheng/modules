@@ -16,8 +16,8 @@
 static const int CheckTime = 1000;
 static const int MaxEpollNum = 10;
 static const int MaxWaitNum = 500;
-static const int IncreaseEventNum = 2000;
-static const int DecreaseAvgNum = IncreaseEventNum / MaxEpollNum;
+static const int IncreaseSessionNum = 1000;
+static const int DecreaseAvgNum = IncreaseSessionNum / MaxEpollNum;
 
 template<typename T>
 class TcpServer {
@@ -28,9 +28,9 @@ public:
     void close();
     ~TcpServer();
 private:
-    void addNewSession(int fd, const shared_ptr<TcpSession>& session);
+    void addNewSession(shared_ptr<TcpSession> session);
     void cycleInit();
-    static void serverCycle(const shared_ptr<void>& arg);
+    static void serverCycle(shared_ptr<void> arg);
 private:
     int serverFd;
     int epollFd;
@@ -72,8 +72,8 @@ TcpServer<T>::TcpServer(int port, AddressType addressType) : isClose(false), wai
 }
 
 template<typename T> inline
-void TcpServer<T>::addNewSession(int fd, const shared_ptr<TcpSession>& session) {
-    if (waitCLose != epollList.end() && waitCLose->getNum() == 0) {
+void TcpServer<T>::addNewSession(shared_ptr<TcpSession> session) {
+    if (waitCLose != epollList.end() && waitCLose->sessionNum+waitCLose->uuidNum == 0) {
         waitCLose->close();
         epollList.erase(waitCLose);
         waitCLose = epollList.end();
@@ -82,7 +82,7 @@ void TcpServer<T>::addNewSession(int fd, const shared_ptr<TcpSession>& session) 
     typename list<EpollTask<T>>::iterator minIter = epollList.end();
     int sum = 0;
     for (auto i = epollList.begin(); i != epollList.end(); ++i) {
-        int num = i->getNum();
+        int num = i->sessionNum;
         sum += num;
         if (num <= min) {
             min = num;
@@ -95,7 +95,7 @@ void TcpServer<T>::addNewSession(int fd, const shared_ptr<TcpSession>& session) 
         if (i == minIter) {
             continue;
         }
-        int num = i->getNum();
+        int num = i->sessionNum;
         if (num <= second) {
             second = num;
             tarIter = i;
@@ -103,17 +103,23 @@ void TcpServer<T>::addNewSession(int fd, const shared_ptr<TcpSession>& session) 
     }
     if (waitCLose != epollList.end() && epollList.size() > 1) {
         waitCLose = minIter;
-        if (fd != -1) {
-            tarIter->addNewSession(fd, session);
+        if (session != nullptr) {
+            session->epoll = &(*tarIter);
+            auto e = ObjPool::allocate<Event>(EventAddSession, session);
+            tarIter->receiveEvent(e);
+            tarIter->sessionNum++;
         }
-        if (second+1 >= IncreaseEventNum && epollList.size() < MaxEpollNum) {
+        if (second+1 >= IncreaseSessionNum && epollList.size() < MaxEpollNum) {
             waitCLose = epollList.end();
         }
     } else {
-        if (fd != -1) {
-            minIter->addNewSession(fd, session);
+        if (session != nullptr) {
+            session->epoll = &(*minIter);
+            auto e = ObjPool::allocate<Event>(EventAddSession, session);
+            minIter->receiveEvent(e);
+            minIter->sessionNum++;
         }
-        if (min+1 >= IncreaseEventNum && epollList.size() < MaxEpollNum) {
+        if (min+1 >= IncreaseSessionNum && epollList.size() < MaxEpollNum) {
             epollList.emplace_back(this);
         } else if (epollList.size() > 1 && sum / epollList.size() < DecreaseAvgNum) {
             waitCLose = minIter;
@@ -172,14 +178,14 @@ void TcpServer<T>::cycleInit() {
 }
 
 template<typename T>
-void TcpServer<T>::serverCycle(const shared_ptr<void> &arg) {
+void TcpServer<T>::serverCycle(shared_ptr<void> arg) {
     TcpServer<T>* server = *static_pointer_cast<TcpServer<T>*>(arg);
     server->cycleInit();
     while (!server->isClose) {
         epoll_event events[MaxWaitNum];
         int num = epoll_wait(server->epollFd, events, MaxWaitNum, CheckTime);
         if (num <= 0) {
-            server->addNewSession(-1, nullptr);
+            server->addNewSession(nullptr);
         }
         for (int i = 0; i < num; i++) {
             auto event = events[i];
@@ -190,7 +196,8 @@ void TcpServer<T>::serverCycle(const shared_ptr<void> &arg) {
                 auto session = ObjPool::allocate<T>();
                 int clientFd = accept(server->serverFd, &session->address, &session->len);
                 if (clientFd > 0) {
-                    server->addNewSession(clientFd, session);
+                    session->epollEvent.data.fd = clientFd;
+                    server->addNewSession(session);
                 }
             }
         }

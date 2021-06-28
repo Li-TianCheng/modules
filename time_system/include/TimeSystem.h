@@ -13,7 +13,7 @@ class TimeSystem{
 public:
     static void init();
     static void close();
-    static string receiveEvent(EventKey eventType, const shared_ptr<Time>& arg);
+    static string receiveEvent(EventKey eventType, shared_ptr<Time> arg);
     static void deleteTicker(const string& uuid);
     TimeSystem(const TimeSystem&) = delete;
     TimeSystem(TimeSystem&&) = delete;

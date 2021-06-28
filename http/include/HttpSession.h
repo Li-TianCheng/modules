@@ -22,7 +22,7 @@ public:
     void handleTickerTimeOut(const string &uuid) override;
 private:
     void handleReadDone(const string& recvMsg) override;
-    void match(const shared_ptr<Http>& request);
+    void match(shared_ptr<Http> request);
     void parse(char& c);
     string getGMTTime();
 private:

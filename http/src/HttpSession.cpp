@@ -15,7 +15,7 @@ HttpSession::HttpSession() : isFirstPing(true), request(nullptr), status(0), tim
     ping = ObjPool::allocate<Ping>(*(sockaddr_in*)&address);
 }
 
-void HttpSession::match(const shared_ptr<Http>& request) {
+void HttpSession::match(shared_ptr<Http> request) {
     auto response = ObjPool::allocate<Http>(false);
     response->line["version"] = request->line["version"];
     response->line["status"] = "404";

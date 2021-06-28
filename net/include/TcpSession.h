@@ -60,7 +60,7 @@ protected:
 struct EpollEventArg {
     shared_ptr<Time> t;
     TcpSession* session;
-    EpollEventArg(const shared_ptr<Time>& t, TcpSession* session) : t(t), session(session) {};
+    EpollEventArg(shared_ptr<Time> t, TcpSession* session) : t(t), session(session) {};
 };
 
 #endif //NET_TCPSESSION_H

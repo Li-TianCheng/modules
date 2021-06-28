@@ -4,7 +4,7 @@
 
 #include "EventSystem.h"
 
-void EventSystem::registerEvent(EventKey eventType, void (*handleEvent)(const shared_ptr<void>&)) {
+void EventSystem::registerEvent(EventKey eventType, void (*handleEvent)(shared_ptr<void>)) {
     map[eventType] = handleEvent;
 }
 
@@ -12,7 +12,7 @@ void EventSystem::unregisterEvent(EventKey eventType) {
     map.erase(eventType);
 }
 
-void EventSystem::receiveEvent(const shared_ptr<Event>& e) {
+void EventSystem::receiveEvent(shared_ptr<Event> e) {
     if (shutdown){
         return;
     }
@@ -21,7 +21,7 @@ void EventSystem::receiveEvent(const shared_ptr<Event>& e) {
     condition.notify(mutex);
 }
 
-void EventSystem::doEvent(const shared_ptr<Event>& e) {
+void EventSystem::doEvent(shared_ptr<Event> e) {
     if (e == nullptr){
         return;
     }
@@ -70,7 +70,7 @@ EventSystem::~EventSystem() {
 
 EventSystem::EventSystem() : shutdown(false) {}
 
-void EventSystem::cycleTask(const shared_ptr<void>& arg) {
+void EventSystem::cycleTask(shared_ptr<void> arg) {
     (*static_pointer_cast<EventSystem*>(arg))->cycle();
 }
 

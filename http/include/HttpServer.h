@@ -16,14 +16,14 @@ public:
     HttpServer(int port, AddressType addressType);
     void serve();
     void close();
-    void registerHandler(const string& pattern, void(*handle)(const shared_ptr<Http>&, const shared_ptr<Http>&));
-    void registerRegexHandler(const string& pattern, void(*handle)(const shared_ptr<Http>&, const shared_ptr<Http>&));
+    void registerHandler(const string& pattern, void(*handle)(shared_ptr<Http>, shared_ptr<Http>));
+    void registerRegexHandler(const string& pattern, void(*handle)(shared_ptr<Http>, shared_ptr<Http>));
     void unregisterHandler(const string& pattern);
     void unregisterRegexHandler(const string& pattern);
 private:
     friend class HttpSession;
-    static unordered_map<string, void(*)(const shared_ptr<Http>&, const shared_ptr<Http>&)>& getRegexMux();
-    static unordered_map<string, void(*)(const shared_ptr<Http>&, const shared_ptr<Http>&)>& getMux();
+    static unordered_map<string, void(*)(shared_ptr<Http>, shared_ptr<Http>)>& getRegexMux();
+    static unordered_map<string, void(*)(shared_ptr<Http>, shared_ptr<Http>)>& getMux();
 private:
     TcpServer<HttpSession> server;
 };

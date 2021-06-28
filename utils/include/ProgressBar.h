@@ -25,7 +25,7 @@ public:
     void cycleClear() override;
 private:
     void init();
-    static void handleTimeOut(const shared_ptr<void>& arg);
+    static void handleTimeOut(shared_ptr<void> arg);
     void draw();
 private:
     shared_ptr<Time> updateTime;
