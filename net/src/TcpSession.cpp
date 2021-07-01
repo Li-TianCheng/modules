@@ -8,8 +8,21 @@ TcpSession::TcpSession() : isCloseConnection(false), isWrite(false), isRead(fals
     len = sizeof(address);
 }
 
+void TcpSession::write(vector<char>&& sendMsg) {
+    if (isCloseConnection || sendMsg.empty()) {
+        return;
+    }
+    mutex.lock();
+    msgQueue.emplace(std::forward<vector<char>>(sendMsg));
+    isWrite = true;
+    epollEvent.events |= Write;
+    isWrite = false;
+    resetEpollEvent();
+    mutex.unlock();
+}
+
 void TcpSession::write(string&& sendMsg) {
-    if (isCloseConnection) {
+    if (isCloseConnection || sendMsg.empty()) {
         return;
     }
     mutex.lock();
@@ -53,7 +66,7 @@ void TcpSession::sessionClear() {
 
 }
 
-string TcpSession::addTicker(int h, int m, int s, int ms) {
+const string& TcpSession::addTicker(int h, int m, int s, int ms) {
     auto t = ObjPool::allocate<Time>(h, m, s, ms, epoll);
     auto arg = ObjPool::allocate<EpollEventArg>(t, this);
     auto e = ObjPool::allocate<Event>(EventTicker, arg);
@@ -61,7 +74,7 @@ string TcpSession::addTicker(int h, int m, int s, int ms) {
     return t->uuid;
 }
 
-string TcpSession::addTimer(int h, int m, int s, int ms) {
+const string& TcpSession::addTimer(int h, int m, int s, int ms) {
     auto t = ObjPool::allocate<Time>(h, m, s, ms, epoll);
     auto arg = ObjPool::allocate<EpollEventArg>(t, this);
     auto e = ObjPool::allocate<Event>(EventTimer, arg);
@@ -77,7 +90,11 @@ void TcpSession::handleTickerTimeOut(const string& uuid) {
 
 }
 
-void TcpSession::handleReadDone(const string &recvMsg) {
+void TcpSession::handleReadDone(iter pos, size_t n) {
 
+}
+
+void TcpSession::readDone(size_t n) {
+    readBuffer.readDone(n);
 }
 

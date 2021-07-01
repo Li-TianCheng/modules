@@ -9,33 +9,33 @@
 #include <sys/socket.h>
 #include <string>
 #include "EpollEventType.h"
+#include "Buffer.h"
 #include "time_system/include/Time.h"
 #include "time_system/include/TimeSystem.h"
 
-
-using std::string;
-
-static const int ReadBufferSize = 256;
-
 struct Msg {
-    string msg;
+    vector<char> msg;
+    string strMsg;
     int offset;
-    explicit Msg(string&& msg) : msg(std::forward<string>(msg)), offset(0) {}
+    explicit Msg(vector<char>&& msg) : msg(std::forward<vector<char>>(msg)), offset(0) {}
+    explicit Msg(string&& strMsg) : strMsg(std::forward<string>(strMsg)), offset(0) {}
 };
 
 class TcpSession {
 public:
     TcpSession();
+    void write(vector<char>&& sendMsg);
     void write(string&& sendMsg);
     void closeConnection();
     void closeListen();
-    string addTicker(int h, int m, int s, int ms);
-    string addTimer(int h, int m, int s, int ms);
+    const string& addTicker(int h, int m, int s, int ms);
+    const string& addTimer(int h, int m, int s, int ms);
+    void readDone(size_t n);
     virtual void sessionInit();
     virtual void sessionClear();
     virtual void handleTickerTimeOut(const string& uuid);
     virtual void handleTimerTimeOut(const string& uuid);
-    virtual void handleReadDone(const string& recvMsg);
+    virtual void handleReadDone(iter pos, size_t n);
     virtual ~TcpSession() = default;
 private:
     void resetEpollEvent();
@@ -54,7 +54,7 @@ protected:
     sockaddr address;
     socklen_t len;
     epoll_event epollEvent;
-    char buffer[ReadBufferSize];
+    Buffer readBuffer;
 };
 
 struct EpollEventArg {

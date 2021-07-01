@@ -188,24 +188,15 @@ bool EpollTask<T>::isRunning() {
 template<typename T> inline
 void EpollTask<T>::readTask(shared_ptr<void> arg) {
     auto session = static_pointer_cast<TcpSession>(arg);
-    string readMsg;
     session->isRead = true;
-    while (true) {
-        int recvNum = recv(session->epollEvent.data.fd, session->buffer, sizeof(session->buffer), MSG_DONTWAIT);
-        if (recvNum <= 0) {
-            if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
-                break;
-            }
-            session->epollEvent.events = Err|Hup|RdHup|Et|OneShot;
-            session->isRead = false;
-            session->resetEpollEvent();
-            return;
-        }
-        string temp = session->buffer;
-        temp.resize(recvNum);
-        readMsg += temp;
+    int res = session->readBuffer.readFromFd(session->epollEvent.data.fd);
+    if (res == -1) {
+        session->epollEvent.events = Err|Hup|RdHup|Et|OneShot;
+        session->isRead = false;
+        session->resetEpollEvent();
+        return;
     }
-    session->handleReadDone(readMsg);
+    session->handleReadDone(session->readBuffer.getReadPos(), session->readBuffer.getMsgNum());
     session->isRead = false;
     session->resetEpollEvent();
 }
@@ -215,8 +206,19 @@ void EpollTask<T>::writeTask(shared_ptr<void> arg) {
     auto session = static_pointer_cast<TcpSession>(arg);
     session->mutex.lock();
     while (!session->msgQueue.empty()) {
-        while (session->msgQueue.front().offset != session->msgQueue.front().msg.size()) {
-            int sendNum = send(session->epollEvent.data.fd, session->msgQueue.front().msg.data()+session->msgQueue.front().offset, session->msgQueue.front().msg.size()-session->msgQueue.front().offset, MSG_DONTWAIT);
+        while (true) {
+            int sendNum;
+            if (!session->msgQueue.front().msg.empty()) {
+                if (session->msgQueue.front().offset == session->msgQueue.front().msg.size()) {
+                    break;
+                }
+                sendNum = send(session->epollEvent.data.fd, session->msgQueue.front().msg.data()+session->msgQueue.front().offset, session->msgQueue.front().msg.size()-session->msgQueue.front().offset, MSG_DONTWAIT);
+            } else {
+                if (session->msgQueue.front().offset == session->msgQueue.front().strMsg.size()) {
+                    break;
+                }
+                sendNum = send(session->epollEvent.data.fd, session->msgQueue.front().strMsg.data()+session->msgQueue.front().offset, session->msgQueue.front().strMsg.size()-session->msgQueue.front().offset, MSG_DONTWAIT);
+            }
             if (sendNum <= 0) {
                 if (errno == EAGAIN) {
                     session->isWrite = false;

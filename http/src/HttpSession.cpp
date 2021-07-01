@@ -4,11 +4,11 @@
 
 #include "http/include/HttpSession.h"
 
-void HttpSession::handleReadDone(const string &recvMsg) {
-    for (auto c : recvMsg) {
-        parse(c);
+void HttpSession::handleReadDone(iter pos, size_t n) {
+    for (size_t i = 0; i < n; i++) {
+        parse(*(pos++));
     }
-
+    readDone(n);
 }
 
 HttpSession::HttpSession() : isFirstPing(true), request(nullptr), status(0), timeout(0) {
@@ -16,7 +16,7 @@ HttpSession::HttpSession() : isFirstPing(true), request(nullptr), status(0), tim
 }
 
 void HttpSession::match(shared_ptr<Http> request) {
-    auto response = ObjPool::allocate<Http>(false);
+    auto response = ObjPool::allocate<Http>();
     response->line["version"] = request->line["version"];
     response->line["status"] = "404";
     response->line["msg"] = "NOT FOUND";
@@ -43,16 +43,16 @@ void HttpSession::match(shared_ptr<Http> request) {
         response->head["Keep-Alive"] = "timeout=30";
         timeout = 0;
     }
-    write(string(*response));
+    sendResponse(response);
     if (response->head["Connection"] == "close") {
         closeConnection();
     }
 }
 
-void HttpSession::parse(char &c) {
+void HttpSession::parse(const char &c) {
     switch(status) {
         case 0:{
-            request = ObjPool::allocate<Http>(true);
+            request = ObjPool::allocate<Http>();
             status = 1;
         }
         case 1:{
@@ -132,7 +132,7 @@ void HttpSession::parse(char &c) {
                 request = nullptr;
                 status = 0;
             } else {
-                request->data += c;
+                request->data.push_back(c);
             }
             break;
         }
@@ -172,4 +172,17 @@ void HttpSession::handleTickerTimeOut(const string &uuid) {
             closeConnection();
         }
     }
+}
+
+void HttpSession::sendResponse(shared_ptr<Http> response) {
+    string msg;
+    msg += std::move(response->line["version"])+" ";
+    msg += std::move(response->line["status"])+" ";
+    msg += std::move(response->line["msg"])+"\r\n";
+    for (auto& h : response->head) {
+        msg += h.first+":"+h.second+"\r\n";
+    }
+    msg += "\r\n";
+    write(std::move(msg));
+    write(std::move(response->data));
 }

@@ -25,9 +25,9 @@ class TcpClient {
 public:
     TcpClient(const string& address, AddressType addressType);
     void connect();
-    void write(const string& context);
+    void write(char* c, int n);
     void close();
-    string read();
+    int read();
 private:
     int clientFd;
     sockaddr serverAddress;

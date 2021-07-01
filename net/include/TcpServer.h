@@ -12,6 +12,8 @@
 #include <csignal>
 #include "AddressType.h"
 #include "EpollTask.h"
+#include "TcpSession.h"
+
 
 static const int CheckTime = 1000;
 static const int MaxEpollNum = 10;

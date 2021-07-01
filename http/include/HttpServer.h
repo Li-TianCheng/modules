@@ -7,9 +7,9 @@
 
 #include "net/include/TcpServer.h"
 #include "HttpSession.h"
-#include "Http.h"
 
 class HttpSession;
+struct Http;
 
 class HttpServer {
 public:
