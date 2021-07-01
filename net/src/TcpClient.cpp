@@ -36,13 +36,16 @@ void TcpClient::connect() {
     }
 }
 
-void TcpClient::write(char* c, int n) {
+void TcpClient::write(const char* c, int n) {
     send(clientFd, c, n, 0);
 }
 
-int TcpClient::read() {
+string TcpClient::read() {
+    string msg;
     int recvNum = recv(clientFd, buffer, sizeof(buffer), 0);
-    return recvNum;
+    msg = buffer;
+    msg.resize(recvNum);
+    return msg;
 }
 
 void TcpClient::close() {
