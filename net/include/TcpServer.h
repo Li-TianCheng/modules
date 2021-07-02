@@ -83,8 +83,10 @@ void TcpServer<T>::addNewSession(shared_ptr<TcpSession> session) {
     int min = INT32_MAX;
     typename list<EpollTask<T>>::iterator minIter = epollList.end();
     int sum = 0;
+    vector<int> snapshot;
     for (auto i = epollList.begin(); i != epollList.end(); ++i) {
         int num = i->sessionNum;
+        snapshot.push_back(num);
         sum += num;
         if (num <= min) {
             min = num;
@@ -93,11 +95,13 @@ void TcpServer<T>::addNewSession(shared_ptr<TcpSession> session) {
     }
     int second = INT32_MAX;
     typename list<EpollTask<T>>::iterator tarIter = epollList.end();
+    int count = -1;
     for (auto i = epollList.begin(); i != epollList.end(); i++) {
+        count++;
         if (i == minIter) {
             continue;
         }
-        int num = i->sessionNum;
+        int num = snapshot[count];
         if (num <= second) {
             second = num;
             tarIter = i;

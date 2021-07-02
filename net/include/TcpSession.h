@@ -16,7 +16,7 @@
 struct Msg {
     vector<char> msg;
     string strMsg;
-    int offset;
+    size_t offset;
     explicit Msg(vector<char>&& msg) : msg(std::forward<vector<char>>(msg)), offset(0) {}
     explicit Msg(string&& strMsg) : strMsg(std::forward<string>(strMsg)), offset(0) {}
 };

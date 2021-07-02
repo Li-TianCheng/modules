@@ -188,10 +188,9 @@ bool EpollTask<T>::isRunning() {
 template<typename T> inline
 void EpollTask<T>::readTask(shared_ptr<void> arg) {
     auto session = static_pointer_cast<TcpSession>(arg);
-    session->isRead = true;
     int res = session->readBuffer.readFromFd(session->epollEvent.data.fd);
     if (res == -1) {
-        session->epollEvent.events = Err|Hup|RdHup|Et|OneShot;
+        session->epollEvent.events = Read|Err|Hup|RdHup|Et|OneShot;
         session->isRead = false;
         session->resetEpollEvent();
         return;
@@ -207,7 +206,7 @@ void EpollTask<T>::writeTask(shared_ptr<void> arg) {
     session->mutex.lock();
     while (!session->msgQueue.empty()) {
         while (true) {
-            int sendNum;
+            ssize_t sendNum;
             if (!session->msgQueue.front().msg.empty()) {
                 if (session->msgQueue.front().offset == session->msgQueue.front().msg.size()) {
                     break;
@@ -221,15 +220,15 @@ void EpollTask<T>::writeTask(shared_ptr<void> arg) {
             }
             if (sendNum <= 0) {
                 if (errno == EAGAIN) {
+                    session->mutex.unlock();
                     session->isWrite = false;
                     session->resetEpollEvent();
-                    session->mutex.unlock();
                     return;
                 } else {
-                    session->epollEvent.events = Err|Hup|RdHup|Et|OneShot;
+                    session->epollEvent.events = Read|Err|Hup|RdHup|Et|OneShot;
+                    session->mutex.unlock();
                     session->isWrite = false;
                     session->resetEpollEvent();
-                    session->mutex.unlock();
                     return;
                 }
             }
@@ -237,12 +236,12 @@ void EpollTask<T>::writeTask(shared_ptr<void> arg) {
         }
         session->msgQueue.pop();
     }
-    session->isWrite = false;
     session->epollEvent.events &= ~Write;
     session->mutex.unlock();
     if (session->isCloseConnection) {
         ::shutdown(session->epollEvent.data.fd, SHUT_RD);
     }
+    session->isWrite = false;
     session->resetEpollEvent();
 }
 
@@ -262,10 +261,12 @@ void EpollTask<T>::cycleTask(shared_ptr<void> arg) {
             } else {
                 if ((event.events & Read) == Read) {
                     auto session = epoll->sessionManager[event.data.fd];
+                    session->isRead = true;
                     TaskSystem::addTask(readTask, session);
                 }
                 if ((event.events & Write) == Write) {
                     auto session = epoll->sessionManager[event.data.fd];
+                    session->isWrite = true;
                     TaskSystem::addPriorityTask(writeTask, session);
                 }
             }

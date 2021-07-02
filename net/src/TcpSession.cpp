@@ -12,26 +12,26 @@ void TcpSession::write(vector<char>&& sendMsg) {
     if (isCloseConnection || sendMsg.empty()) {
         return;
     }
+    isWrite = true;
     mutex.lock();
     msgQueue.emplace(std::forward<vector<char>>(sendMsg));
-    isWrite = true;
     epollEvent.events |= Write;
+    mutex.unlock();
     isWrite = false;
     resetEpollEvent();
-    mutex.unlock();
 }
 
 void TcpSession::write(string&& sendMsg) {
     if (isCloseConnection || sendMsg.empty()) {
         return;
     }
+    isWrite = true;
     mutex.lock();
     msgQueue.emplace(std::forward<string>(sendMsg));
-    isWrite = true;
     epollEvent.events |= Write;
+    mutex.unlock();
     isWrite = false;
     resetEpollEvent();
-    mutex.unlock();
 }
 
 void TcpSession::closeConnection() {
