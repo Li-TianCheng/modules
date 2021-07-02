@@ -6,153 +6,70 @@
 #define UTILS_SERIALIZE_H
 
 #include <string>
-#include <jsoncpp/json/json.h>
+#include <vector>
 
 using namespace std;
 
-class Serialize {
-public:
-    template<typename T>
-    static Json::Value serialize(T& obj);
-    template<typename T>
-    static Json::Value serialize(vector<T>& obj);
-    template<typename T>
-    static T deserialize(const string& str);
-private:
-    Serialize() = default;
-};
-
-template<typename T> inline
-Json::Value Serialize::serialize(T& obj) {
-    Json::Value json;
-    obj.serialize(json);
-    return json;
+template<typename T>
+vector<char> serialize(T& obj) {
+    return vector<char>((char*)&obj, (char*)&obj+sizeof(T));
 }
 
-template<> inline
-Json::Value Serialize::serialize(int& obj) {
-    Json::Value json;
-    json["_"] = obj;
-    return json;
+template<typename T>
+vector<char> serialize(vector<T>& obj) {
+    return vector<char>((char*)&obj[0], (char*)&obj[0]+obj.size()*sizeof(T));
 }
 
-template<> inline
-Json::Value Serialize::serialize(double& obj) {
-    Json::Value json;
-    json["_"] = obj;
-    return json;
+template<>
+vector<char> serialize(vector<char>& obj) {
+    return obj;
 }
 
-template<> inline
-Json::Value Serialize::serialize(float& obj) {
-    Json::Value json;
-    json["_"] = obj;
-    return json;
-}
-
-template<> inline
-Json::Value Serialize::serialize(char& obj) {
-    Json::Value json;
-    json["_"] = obj;
-    return json;
-}
-
-template<> inline
-Json::Value Serialize::serialize(string& obj) {
-    Json::Value json;
-    json["_"] = obj;
-    return json;
-}
-
-template<> inline
-Json::Value Serialize::serialize(bool& obj) {
-    Json::Value json;
-    json["_"] = obj;
-    return json;
-}
-
-template<typename T> inline
-Json::Value Serialize::serialize(vector<T>& obj) {
-    Json::Value json;
-    for (auto& v : obj) {
-        json["_"].append(serialize<T>(v));
+template<typename T>
+vector<char> serialize(list<T>& obj) {
+    vector<char> v;
+    for (auto& c : obj) {
+        v.insert(v.end(), (char*)&c, (char*)&c+sizeof(T));
     }
-    return json;
+    return v;
 }
 
-template<> inline
-Json::Value Serialize::serialize(vector<bool>& obj) {
-    Json::Value json;
-    for (auto v : obj) {
-        if (v) {
-            json["_"].append(true);
-        } else {
-            json["_"].append(false);
-        }
-    }
-    return json;
+vector<char> serialize(string& obj) {
+    return vector<char>(obj.begin(), obj.end());
 }
 
-template<typename T> inline
-T Serialize::deserialize(const string& str) {
-    Json::Reader reader;
-    Json::Value s;
-    if (!reader.parse(str, s)) {
-        throw std::runtime_error("反序列化错误");
-    }
-    T t;
-    t.deserialize(s);
-    return t;
+template<typename T>
+T deserialize(vector<char>& binary){
+    return *(T*)binary.data();
 }
 
-template<> inline
-int Serialize::deserialize(const string& str) {
-    Json::Reader reader;
-    Json::Value s;
-    if (!reader.parse(str, s)) {
-        throw std::runtime_error("反序列化错误");
-    }
-    return s["_"].asInt();
+template<typename T>
+vector<T> deserializeVector(vector<char>& binary) {
+    return vector<T>((T*)&binary[0], (T*)&binary[binary.size()]);
 }
 
-template<> inline
-double Serialize::deserialize(const string& str) {
-    Json::Reader reader;
-    Json::Value s;
-    if (!reader.parse(str, s)) {
-        throw std::runtime_error("反序列化错误");
-    }
-    return s["_"].asDouble();
+template<>
+vector<char> deserializeVector(vector<char>& binary) {
+    return binary;
 }
 
-template<> inline
-float Serialize::deserialize(const string& str) {
-    Json::Reader reader;
-    Json::Value s;
-    if (!reader.parse(str, s)) {
-        throw std::runtime_error("反序列化错误");
-    }
-    return s["_"].asFloat();
+string deserializeString(vector<char>& binary) {
+    return binary.data();
 }
 
-template<> inline
-char Serialize::deserialize(const string& str) {
-    Json::Reader reader;
-    Json::Value s;
-    if (!reader.parse(str, s)) {
-        throw std::runtime_error("反序列化错误");
+template<typename T>
+list<T> deserializeList(vector<char>& binary) {
+    list<T> list;
+    for (int i = 0; i < binary.size(); i+=sizeof(T)) {
+        list.push_back(*(T*)&binary[i]);
     }
-    return s["_"].asCString()[0];
+    return list;
 }
 
-template<> inline
-bool Serialize::deserialize(const string& str) {
-    Json::Reader reader;
-    Json::Value s;
-    if (!reader.parse(str, s)) {
-        throw std::runtime_error("反序列化错误");
+string& appendVector(string& str, vector<char>& binary) {
+    for (auto& b : binary) {
+        str += b;
     }
-    return s["_"].asBool();
 }
 
 #endif //UTILS_SERIALIZE_H
