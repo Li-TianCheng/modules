@@ -13,19 +13,25 @@
 #include "time_system/include/Time.h"
 #include "time_system/include/TimeSystem.h"
 
+static const int AppendSize = 1024;
+
 struct Msg {
-    vector<char> msg;
-    string strMsg;
+    int type;
     size_t offset;
-    explicit Msg(vector<char>&& msg) : msg(std::forward<vector<char>>(msg)), offset(0) {}
-    explicit Msg(string&& strMsg) : strMsg(std::forward<string>(strMsg)), offset(0) {}
+    shared_ptr<void> msg;
+    explicit Msg(shared_ptr<string> msg) : type(0), offset(0) {
+        this->msg = msg;
+    }
+    explicit Msg(shared_ptr<vector<char>> msg) : type(1), offset(0) {
+        this->msg = msg;
+    }
 };
 
 class TcpSession {
 public:
     TcpSession();
-    void write(vector<char>&& sendMsg);
-    void write(string&& sendMsg);
+    void write(shared_ptr<vector<char>> sendMsg);
+    void write(shared_ptr<string> sendMsg);
     void closeConnection();
     void closeListen();
     const string& addTicker(int h, int m, int s, int ms);
@@ -38,7 +44,6 @@ public:
     virtual void handleReadDone(iter pos, size_t n);
     virtual ~TcpSession() = default;
 private:
-    void resetEpollEvent();
     template<typename T>
     friend class EpollTask;
     template<typename T>
@@ -47,7 +52,7 @@ protected:
     std::atomic<bool> isCloseConnection;
     std::atomic<bool> isWrite;
     std::atomic<bool> isRead;
-    queue<Msg> msgQueue;
+    deque<Msg> msgQueue;
     Mutex mutex;
     EventSystem* epoll;
     int epollFd;

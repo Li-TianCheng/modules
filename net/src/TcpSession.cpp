@@ -8,30 +8,52 @@ TcpSession::TcpSession() : isCloseConnection(false), isWrite(false), isRead(fals
     len = sizeof(address);
 }
 
-void TcpSession::write(vector<char>&& sendMsg) {
-    if (isCloseConnection || sendMsg.empty()) {
+void TcpSession::write(shared_ptr<vector<char>> sendMsg) {
+    if (isCloseConnection || sendMsg == nullptr || (*sendMsg).empty()) {
         return;
     }
-    isWrite = true;
     mutex.lock();
-    msgQueue.emplace(std::forward<vector<char>>(sendMsg));
+    if (!msgQueue.empty() && sendMsg->size() <= AppendSize) {
+        if (msgQueue.back().type == 0){
+            shared_ptr<string> msg = static_pointer_cast<string>(msgQueue.back().msg);
+            msg->reserve(msg->size()+sendMsg->size());
+            msg->insert(msg->end(), sendMsg->data(), sendMsg->data()+sendMsg->size());
+        }
+        if (msgQueue.back().type == 1) {
+            shared_ptr<vector<char>> msg = static_pointer_cast<vector<char>>(msgQueue.back().msg);
+            msg->reserve(msg->size()+sendMsg->size());
+            msg->insert(msg->end(), sendMsg->data(), sendMsg->data()+sendMsg->size());
+        }
+    } else {
+        msgQueue.emplace_back(sendMsg);
+    }
     epollEvent.events |= Write;
     mutex.unlock();
-    isWrite = false;
-    resetEpollEvent();
+    epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent);
 }
 
-void TcpSession::write(string&& sendMsg) {
-    if (isCloseConnection || sendMsg.empty()) {
+void TcpSession::write(shared_ptr<string> sendMsg) {
+    if (isCloseConnection || sendMsg == nullptr || (*sendMsg).empty()) {
         return;
     }
-    isWrite = true;
     mutex.lock();
-    msgQueue.emplace(std::forward<string>(sendMsg));
+    if (!msgQueue.empty() && sendMsg->size() <= AppendSize) {
+        if (msgQueue.back().type == 0){
+            shared_ptr<string> msg = static_pointer_cast<string>(msgQueue.back().msg);
+            msg->reserve(msg->size()+sendMsg->size());
+            msg->insert(msg->end(), sendMsg->data(), sendMsg->data()+sendMsg->size());
+        }
+        if (msgQueue.back().type == 1) {
+            shared_ptr<vector<char>> msg = static_pointer_cast<vector<char>>(msgQueue.back().msg);
+            msg->reserve(msg->size()+sendMsg->size());
+            msg->insert(msg->end(), sendMsg->data(), sendMsg->data()+sendMsg->size());
+        }
+    } else {
+        msgQueue.emplace_back(sendMsg);
+    }
     epollEvent.events |= Write;
     mutex.unlock();
-    isWrite = false;
-    resetEpollEvent();
+    epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent);
 }
 
 void TcpSession::closeConnection() {
@@ -49,13 +71,6 @@ void TcpSession::closeListen() {
     auto arg = ObjPool::allocate<TcpSession*>(this);
     auto e = ObjPool::allocate<Event>(EventCloseListen, arg);
     epoll->receiveEvent(e);
-}
-
-void TcpSession::resetEpollEvent() {
-    if (isRead || isWrite) {
-        return;
-    }
-    epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent);
 }
 
 void TcpSession::sessionInit() {

@@ -5,7 +5,7 @@
 #include "Ping.h"
 #include <iostream>
 
-Ping::Ping(sockaddr_in &address) : address(address) {
+Ping::Ping(const sockaddr_in &address) : address(address) {
     fd = socket(IPV4, SOCK_RAW, IPPROTO_ICMP);
 }
 

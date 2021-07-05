@@ -33,7 +33,7 @@ private:
 template<typename T, typename... Args> inline
 shared_ptr<T> ObjPool::allocate(Args... args) {
     void* ptr = getInstance().allocate(sizeof(T));
-    return shared_ptr<T>(::new(ptr) T(args...), deallocate<T>);
+    return shared_ptr<T>(::new(ptr) T(std::forward<Args>(args)...), deallocate<T>);
 }
 
 template<typename T> inline

@@ -32,13 +32,13 @@ public:
     explicit EpollTask(TcpServer<T>* server);
     bool isRunning();
     ~EpollTask() override;
-    void addNewSession(shared_ptr<TcpSession> session);
-    void delSession(int fd);
     void close();
 private:
     friend class TcpServer<T>;
     void init();
     void epollCycle();
+    void addNewSession(shared_ptr<TcpSession> session);
+    void delSession(int fd);
     static void cycleTask(shared_ptr<void> arg);
     static void handleTickerTimeOut(shared_ptr<void> arg);
     static void handleTimerTimeOut(shared_ptr<void> arg);
@@ -192,49 +192,60 @@ void EpollTask<T>::readTask(shared_ptr<void> arg) {
     if (res == -1) {
         session->epollEvent.events = Read|Err|Hup|RdHup|Et|OneShot;
         session->isRead = false;
-        session->resetEpollEvent();
+        epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
         return;
     }
     session->handleReadDone(session->readBuffer.getReadPos(), session->readBuffer.getMsgNum());
     session->isRead = false;
-    session->resetEpollEvent();
+    epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
 }
 
 template<typename T> inline
 void EpollTask<T>::writeTask(shared_ptr<void> arg) {
     auto session = static_pointer_cast<TcpSession>(arg);
+    deque<Msg> temp;
     session->mutex.lock();
     while (!session->msgQueue.empty()) {
+        temp.push_back(std::move(session->msgQueue.front()));
+        session->msgQueue.pop_front();
+    }
+    session->mutex.unlock();
+    while (!temp.empty()) {
         while (true) {
             ssize_t sendNum;
-            if (!session->msgQueue.front().msg.empty()) {
-                if (session->msgQueue.front().offset == session->msgQueue.front().msg.size()) {
+            if (temp.front().type == 0) {
+                if (temp.front().offset == static_pointer_cast<string>(temp.front().msg)->size()) {
                     break;
                 }
-                sendNum = send(session->epollEvent.data.fd, session->msgQueue.front().msg.data()+session->msgQueue.front().offset, session->msgQueue.front().msg.size()-session->msgQueue.front().offset, MSG_DONTWAIT);
-            } else {
-                if (session->msgQueue.front().offset == session->msgQueue.front().strMsg.size()) {
+                sendNum = send(session->epollEvent.data.fd, static_pointer_cast<string>(temp.front().msg)->data()+temp.front().offset, static_pointer_cast<string>(temp.front().msg)->size()-temp.front().offset, MSG_DONTWAIT);
+            }
+            if (temp.front().type == 1) {
+                if (temp.front().offset == static_pointer_cast<vector<char>>(temp.front().msg)->size()) {
                     break;
                 }
-                sendNum = send(session->epollEvent.data.fd, session->msgQueue.front().strMsg.data()+session->msgQueue.front().offset, session->msgQueue.front().strMsg.size()-session->msgQueue.front().offset, MSG_DONTWAIT);
+                sendNum = send(session->epollEvent.data.fd, static_pointer_cast<vector<char>>(temp.front().msg)->data()+temp.front().offset, static_pointer_cast<vector<char>>(temp.front().msg)->size()-temp.front().offset, MSG_DONTWAIT);
             }
             if (sendNum <= 0) {
                 if (errno == EAGAIN) {
+                    session->mutex.lock();
+                    while (!temp.empty()) {
+                        session->msgQueue.push_front(std::move(temp.back()));
+                        temp.pop_back();
+                    }
                     session->mutex.unlock();
                     session->isWrite = false;
-                    session->resetEpollEvent();
+                    epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
                     return;
                 } else {
                     session->epollEvent.events = Read|Err|Hup|RdHup|Et|OneShot;
-                    session->mutex.unlock();
                     session->isWrite = false;
-                    session->resetEpollEvent();
+                    epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
                     return;
                 }
             }
-            session->msgQueue.front().offset += sendNum;
+            temp.front().offset += sendNum;
         }
-        session->msgQueue.pop();
+        temp.pop_front();
     }
     session->epollEvent.events &= ~Write;
     session->mutex.unlock();
@@ -242,7 +253,7 @@ void EpollTask<T>::writeTask(shared_ptr<void> arg) {
         ::shutdown(session->epollEvent.data.fd, SHUT_RD);
     }
     session->isWrite = false;
-    session->resetEpollEvent();
+    epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
 }
 
 template<typename T> inline
@@ -261,13 +272,17 @@ void EpollTask<T>::cycleTask(shared_ptr<void> arg) {
             } else {
                 if ((event.events & Read) == Read) {
                     auto session = epoll->sessionManager[event.data.fd];
-                    session->isRead = true;
-                    TaskSystem::addTask(readTask, session);
+                    if (!session->isRead) {
+                        session->isRead = true;
+                        TaskSystem::addTask(readTask, session);
+                    }
                 }
                 if ((event.events & Write) == Write) {
                     auto session = epoll->sessionManager[event.data.fd];
-                    session->isWrite = true;
-                    TaskSystem::addPriorityTask(writeTask, session);
+                    if (!session->isWrite) {
+                        session->isWrite = true;
+                        TaskSystem::addPriorityTask(writeTask, session);
+                    }
                 }
             }
         }
@@ -283,7 +298,7 @@ void EpollTask<T>::handleCloseConnection(shared_ptr<void> arg) {
     session->mutex.lock();
     if (session->msgQueue.empty()) {
         ::shutdown(session->epollEvent.data.fd, SHUT_RD);
-        session->resetEpollEvent();
+        epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
     }
     session->mutex.unlock();
 }

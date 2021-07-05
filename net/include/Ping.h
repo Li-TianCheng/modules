@@ -22,7 +22,7 @@ using std::vector;
 
 class Ping {
 public:
-    explicit Ping(sockaddr_in& address);
+    explicit Ping(const sockaddr_in& address);
     explicit Ping(const string& address);
     bool send();
     bool recv();

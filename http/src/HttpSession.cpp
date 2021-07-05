@@ -183,6 +183,8 @@ void HttpSession::sendResponse(shared_ptr<Http> response) {
         msg += h.first+":"+h.second+"\r\n";
     }
     msg += "\r\n";
-    write(std::move(msg));
-    write(std::move(response->data));
+    auto m = ObjPool::allocate<string>(std::move(msg));
+    write(m);
+    auto v = ObjPool::allocate<vector<char>>(std::move(response->data));
+    write(v);
 }
