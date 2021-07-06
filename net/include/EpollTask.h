@@ -247,7 +247,10 @@ void EpollTask<T>::writeTask(shared_ptr<void> arg) {
         }
         temp.pop_front();
     }
-    session->epollEvent.events &= ~Write;
+    session->mutex.lock();
+    if (session->msgQueue.empty()) {
+        session->epollEvent.events &= ~Write;
+    }
     session->mutex.unlock();
     if (session->isCloseConnection) {
         ::shutdown(session->epollEvent.data.fd, SHUT_RD);
