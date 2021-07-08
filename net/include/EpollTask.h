@@ -55,13 +55,14 @@ private:
     std::atomic<int> sessionNum;
     std::atomic<int> uuidNum;
     int epollFd;
+    int waitTime;
     TcpServer<T>* server;
     unordered_map<int, shared_ptr<TcpSession>> sessionManager;
     unordered_map<string, int> uuidToFd;
 };
 
 template<typename T> inline
-EpollTask<T>::EpollTask(TcpServer<T>* server) : running(false), server(server), needClose(false), sessionNum(0), uuidNum(0) {
+EpollTask<T>::EpollTask(TcpServer<T>* server) : running(false), server(server), needClose(false), sessionNum(0), uuidNum(0), waitTime(WaitTime) {
     epollFd = epoll_create(1);
     if (epollFd == -1) {
         throw std::runtime_error("epoll 申请错误");
@@ -267,7 +268,12 @@ void EpollTask<T>::cycleTask(shared_ptr<void> arg) {
     while (!epoll->needClose || epoll->sessionNum + epoll->uuidNum != 0) {
         epoll->cycleNoBlock(-1);
         epoll_event events[EpollEventNum];
-        int num = epoll_wait(epoll->epollFd, events, EpollEventNum, WaitTime);
+        int num = epoll_wait(epoll->epollFd, events, EpollEventNum, epoll->waitTime);
+        if (num == 0) {
+            epoll->waitTime = WaitTime;
+        } else {
+            epoll->waitTime = 0;
+        }
         for (int i = 0; i < num; i++) {
             auto event = events[i];
             if (((event.events & RdHup) == RdHup) || ((event.events & Err) == Err) || ((event.events & Hup) == Hup)) {

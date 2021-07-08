@@ -36,6 +36,7 @@ private:
 private:
     int serverFd;
     int epollFd;
+    int waitTime;
     std::atomic<bool> isClose;
     list<EpollTask<T>> epollList;
     typename list<EpollTask<T>>::iterator waitCLose;
@@ -44,7 +45,7 @@ private:
 };
 
 template<typename T> inline
-TcpServer<T>::TcpServer(int port, AddressType addressType) : isClose(false), waitCLose(epollList.end()) {
+TcpServer<T>::TcpServer(int port, AddressType addressType) : isClose(false), waitCLose(epollList.end()), waitTime(-1) {
     serverFd = socket(addressType, SOCK_STREAM, 0);
     int reuse = 1;
     setsockopt(serverFd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
@@ -189,9 +190,16 @@ void TcpServer<T>::serverCycle(shared_ptr<void> arg) {
     server->cycleInit();
     while (!server->isClose) {
         epoll_event events[MaxWaitNum];
-        int num = epoll_wait(server->epollFd, events, MaxWaitNum, CheckTime);
+        int num = epoll_wait(server->epollFd, events, MaxWaitNum, server->waitTime);
         if (num <= 0) {
-            server->addNewSession(nullptr);
+            if (server->epollList.size() > 1) {
+                server->addNewSession(nullptr);
+                server->waitTime = CheckTime;
+            } else {
+                server->waitTime = -1;
+            }
+        } else {
+            server->waitTime = 0;
         }
         for (int i = 0; i < num; i++) {
             auto event = events[i];
