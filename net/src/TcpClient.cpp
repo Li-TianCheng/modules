@@ -29,11 +29,12 @@ TcpClient::TcpClient(const string &address, AddressType addressType) {
     }
 }
 
-void TcpClient::connect() {
+bool TcpClient::connect() {
     int err = ::connect(clientFd, &serverAddress, sizeof(serverAddress));
     if (err == -1) {
-        throw std::runtime_error("发起连接错误");
+        return false;
     }
+    return true;
 }
 
 void TcpClient::write(const char* c, int n) {

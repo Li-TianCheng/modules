@@ -4,7 +4,7 @@
 
 #include "time_system/include/Time.h"
 
-Time::Time(int h, int m, int s, int ms, EventSystem* ePtr): h(h), m(m), s(s), ms(ms), ePtr(ePtr){
+Time::Time(int h, int m, int s, int ms, EventSystem* ePtr): h(h), m(m), s(s), ms(ms), ePtr(ePtr), tPtr(nullptr){
     uuid_t uu;
     uuid_generate_time_safe(uu);
     uuid = (char*)uu;

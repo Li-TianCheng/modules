@@ -10,9 +10,9 @@
 class Mutex {
 public:
     Mutex();
-    void lock();
-    void unlock();
-    bool tryLock();
+    bool lock();
+    bool unlock();
+    int tryLock();
     ~Mutex();
     Mutex(const Mutex&) = delete;
     Mutex(Mutex&&) = delete;

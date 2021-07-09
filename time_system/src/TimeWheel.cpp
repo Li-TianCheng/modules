@@ -14,6 +14,7 @@ void TimeWheel::init() {
     registerEvent(EventTicker, handleTickerEvent);
     registerEvent(EventTimerTimeOut, handleTimerTimeOut);
     registerEvent(EventTickerTimeOut, handleTickerTimeOut);
+    registerEvent(EventDeleteTicker, handleDeleteTicker);
     registerEvent(EventEndCycle, handleEndCycle);
 }
 
@@ -34,21 +35,18 @@ void TimeWheel::handleTickerEvent(shared_ptr<void> arg) {
 void TimeWheel::handleTimerTimeOut(shared_ptr<void> arg) {
     auto t = static_pointer_cast<TimeWheelEventArg>(arg)->t;
     if (t->ePtr != nullptr){
-        auto _e = ObjPool::allocate<Event>(EventTimerTimeOut, t);
-        t->ePtr->receiveEvent(_e);
+        auto e = ObjPool::allocate<Event>(EventTimerTimeOut, t);
+        t->ePtr->receiveEvent(e);
     }
 }
 
 void TimeWheel::handleTickerTimeOut(shared_ptr<void> arg) {
     auto t = static_pointer_cast<TimeWheelEventArg>(arg)->t;
     TimeWheel* tPtr = t->tPtr;
-    tPtr->mutex.lock();
-    if (tPtr->toDelete.find(t->uuid) != tPtr->toDelete.end()){
-        tPtr->toDelete.erase(t->uuid);
-        tPtr->mutex.unlock();
+    if (tPtr->toDelete.find(t) != tPtr->toDelete.end()){
+        tPtr->toDelete.erase(t);
         return;
     }
-    tPtr->mutex.unlock();
     if (t->ePtr != nullptr){
         auto e = ObjPool::allocate<Event>(EventTickerTimeOut, t);
         t->ePtr->receiveEvent(e);
@@ -56,10 +54,16 @@ void TimeWheel::handleTickerTimeOut(shared_ptr<void> arg) {
     handleTickerEvent(t);
 }
 
-void TimeWheel::deleteTicker(const string& uuid) {
-    mutex.lock();
-    toDelete.insert(uuid);
-    mutex.unlock();
+void TimeWheel::handleDeleteTicker(shared_ptr<void> arg) {
+    if (arg == nullptr) {
+        return;
+    }
+    auto t = static_pointer_cast<Time>(arg);
+    t->tPtr->toDelete.insert(t);
+    if (t->ePtr != nullptr) {
+        auto e = ObjPool::allocate<Event>(EventDeleteTicker, t);
+        t->ePtr->receiveEvent(e);
+    }
 }
 
 void TimeWheel::addTimeToWheel(EventKey e, shared_ptr<Time> t) {

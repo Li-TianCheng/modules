@@ -10,6 +10,7 @@
 #include <cstring>
 #include <unistd.h>
 #include <csignal>
+#include <malloc.h>
 #include "AddressType.h"
 #include "EpollTask.h"
 #include "TcpSession.h"
@@ -76,7 +77,7 @@ TcpServer<T>::TcpServer(int port, AddressType addressType) : isClose(false), wai
 
 template<typename T> inline
 void TcpServer<T>::addNewSession(shared_ptr<TcpSession> session) {
-    if (waitCLose != epollList.end() && waitCLose->sessionNum+waitCLose->uuidNum == 0) {
+    if (waitCLose != epollList.end() && waitCLose->sessionNum+waitCLose->timeToFd.size() == 0) {
         waitCLose->close();
         epollList.erase(waitCLose);
         waitCLose = epollList.end();
@@ -196,7 +197,8 @@ void TcpServer<T>::serverCycle(shared_ptr<void> arg) {
                 server->addNewSession(nullptr);
                 server->waitTime = CheckTime;
             } else {
-                server->waitTime = -1;
+                malloc_trim(0);
+                server->waitTime = CheckTime;
             }
         } else {
             server->waitTime = 0;

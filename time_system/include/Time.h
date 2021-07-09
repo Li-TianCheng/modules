@@ -21,7 +21,7 @@ public:
     int h;
     string uuid;
     EventSystem* ePtr;
-    TimeWheel* tPtr = nullptr;
+    TimeWheel* tPtr;
 };
 
 

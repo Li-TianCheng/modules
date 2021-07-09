@@ -40,7 +40,7 @@ void* ManageChunk::allocate(int num) {
     return head->allocate();
 }
 
-void ManageChunk::deallocate(void* ptr, int num) {
+bool ManageChunk::deallocate(void* ptr, int num) {
     if (ptr != nullptr){
         MemChunk* curr = head;
         while (curr != nullptr){
@@ -62,7 +62,7 @@ void ManageChunk::deallocate(void* ptr, int num) {
                     free = curr;
                 }
                 if (curr == head){
-                    return;
+                    return true;
                 }
                 if (curr->prev != nullptr){
                     curr->prev->next = curr->next;
@@ -74,12 +74,12 @@ void ManageChunk::deallocate(void* ptr, int num) {
                 curr->next = head;
                 head->prev = curr;
                 head = curr;
-                return;
+                return true;
             }
             curr = curr->next;
         }
-        throw std::logic_error("内存释放错误");
     }
+    return false;
 }
 
 ManageChunk::~ManageChunk() {

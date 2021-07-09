@@ -11,9 +11,9 @@ class Thread {
 public:
     Thread() = default;
     void run(void* handle(void*), void* arg);
-    void join();
-    void detach();
-    void cancel();
+    bool join();
+    bool detach();
+    bool cancel();
     pthread_t getID() const;
     bool getState() const;
     void* getResult() const;

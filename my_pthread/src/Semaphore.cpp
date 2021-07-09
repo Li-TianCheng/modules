@@ -11,16 +11,18 @@ Semaphore::Semaphore(int num):semaphore(){
     }
 }
 
-void Semaphore::wait() {
+bool Semaphore::wait() {
     if (sem_wait(&semaphore) != 0){
-        throw std::runtime_error("信号量等待错误");
+        return false;
     }
+    return true;
 }
 
-void Semaphore::post() {
+bool Semaphore::post() {
     if (sem_post(&semaphore) != 0){
-        throw std::runtime_error("信号量释放错误");
+        return false;
     }
+    return true;
 }
 
 Semaphore::~Semaphore() {

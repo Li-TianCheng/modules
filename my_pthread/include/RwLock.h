@@ -10,11 +10,11 @@
 class RwLock {
 public:
     RwLock();
-    void rdLock();
-    void wrLock();
-    void unlock();
-    bool tryRdLock();
-    bool tryWrLock();
+    bool rdLock();
+    bool wrLock();
+    bool unlock();
+    int tryRdLock();
+    int tryWrLock();
     ~RwLock();
     RwLock(const RwLock&) = delete;
     RwLock(RwLock&&) = delete;

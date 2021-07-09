@@ -33,7 +33,6 @@ private:
     string title;
     atomic<int> count;
     int num;
-    string uuid;
 };
 
 

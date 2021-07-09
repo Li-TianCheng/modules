@@ -51,7 +51,7 @@ private:
         shared_ptr<void> arg;
         TaskNode(void (*task)(shared_ptr<void>), shared_ptr<void> arg):task(task), arg(arg){};
     };
-    string uuid;
+    shared_ptr<Time> t;
     Mutex mutex;
     std::atomic<int> runningNum;
     std::atomic<int> threadNum;

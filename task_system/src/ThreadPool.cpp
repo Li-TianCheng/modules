@@ -36,8 +36,8 @@ void ThreadPool::addPriorityTask(void (*task)(shared_ptr<void> arg), shared_ptr<
 }
 
 void ThreadPool::cycleInit() {
-    auto t = ObjPool::allocate<Time>(0, 0, 1, 0, this);
-    uuid = TimeSystem::receiveEvent(EventTicker, t);
+    t = ObjPool::allocate<Time>(0, 0, 1, 0, this);
+    TimeSystem::receiveEvent(EventTicker, t);
     for(auto& thread : threadPool){
         auto arg = new ThreadPoolEventArg(this, &thread);
         thread.run(taskRoutine, arg);
@@ -45,7 +45,7 @@ void ThreadPool::cycleInit() {
 }
 
 void ThreadPool::cycleClear() {
-    TimeSystem::deleteTicker(uuid);
+    TimeSystem::deleteTicker(t);
     join();
 }
 

@@ -11,27 +11,29 @@ Mutex::Mutex():mutex() {
     }
 }
 
-void Mutex::lock() {
+bool Mutex::lock() {
     if (pthread_mutex_lock(&mutex) != 0){
-        throw std::runtime_error("互斥锁加锁错误");
-    }
-}
-
-void Mutex::unlock() {
-    if (pthread_mutex_unlock(&mutex) != 0){
-        throw std::runtime_error("互斥锁释放锁错误");
-    }
-}
-
-bool Mutex::tryLock() {
-    int state = pthread_mutex_trylock(&mutex);
-    if (state == EBUSY) {
         return false;
     }
-    if (state != 0){
-        throw std::runtime_error("互斥锁尝试错误");
+    return true;
+}
+
+bool Mutex::unlock() {
+    if (pthread_mutex_unlock(&mutex) != 0){
+        return false;
     }
     return true;
+}
+
+int Mutex::tryLock() {
+    int state = pthread_mutex_trylock(&mutex);
+    if (state == EBUSY) {
+        return 1;
+    }
+    if (state != 0){
+        return -1;
+    }
+    return 0;
 }
 
 Mutex::~Mutex() {

@@ -12,44 +12,47 @@ RwLock::RwLock():rwLock(){
     }
 }
 
-void RwLock::rdLock() {
+bool RwLock::rdLock() {
     if (pthread_rwlock_rdlock(&rwLock) != 0){
-        throw std::runtime_error("读锁加锁错误");
+        return false;
     }
+    return true;
 }
 
-void RwLock::wrLock() {
+bool RwLock::wrLock() {
     if (pthread_rwlock_wrlock(&rwLock) != 0){
-        throw std::runtime_error("写锁加锁错误");
+        return false;
     }
+    return true;
 }
 
-void RwLock::unlock() {
+bool RwLock::unlock() {
     if (pthread_rwlock_unlock(&rwLock) != 0){
-        throw std::runtime_error("读写锁释放错误");
+        return false;
     }
+    return true;
 }
 
-bool RwLock::tryRdLock() {
+int RwLock::tryRdLock() {
     int state = pthread_rwlock_tryrdlock(&rwLock);
     if (state == EBUSY) {
-        return false;
+        return 1;
     }
     if (state != 0){
-        throw std::runtime_error("读锁尝试错误");
+        return -1;
     }
-    return true;
+    return 0;
 }
 
-bool RwLock::tryWrLock() {
+int RwLock::tryWrLock() {
     int state = pthread_rwlock_trywrlock(&rwLock);
     if (state == EBUSY) {
-        return false;
+        return 1;
     }
     if (state != 0){
-        throw std::runtime_error("写锁尝试错误");
+        return -1;
     }
-    return true;
+    return 0;
 }
 
 RwLock::~RwLock() {

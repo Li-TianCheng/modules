@@ -17,7 +17,7 @@ void MySql::init() {
 }
 
 void MySql::cycleClear() {
-    TimeSystem::deleteTicker(uuid);
+    TimeSystem::deleteTicker(checkTime);
 }
 
 void MySql::handleTimeOut(shared_ptr<void> arg) {
@@ -34,7 +34,7 @@ void MySql::connect() {
     auto arg = ObjPool::allocate<MySql*>(this);
     TaskSystem::addTask(cycleTask, arg);
     checkTime = ObjPool::allocate<Time>(0, 0, 1, 0, this);
-    uuid = TimeSystem::receiveEvent(EventTicker, checkTime);
+    TimeSystem::receiveEvent(EventTicker, checkTime);
 }
 
 shared_ptr<Connection> MySql::getConnection() {
@@ -101,12 +101,12 @@ void MySql::freeConnection(shared_ptr<Connection> conn) {
     condition.notify(mutex);
 }
 
-void MySql::executeSQL(const string &sql) {
+bool MySql::executeSQL(const string &sql) {
     shared_ptr<Connection> conn = getConnection();
     if (mysql_real_query(&conn->conn, sql.data(), sql.size()) != 0) {
         std::cerr << mysql_error(&conn->conn) << std::endl;
         freeConnection(conn);
-        throw std::runtime_error("执行SQL失败");
+        return false;
     }
     while (true) {
         MYSQL_RES* re = mysql_store_result(&conn->conn);
@@ -116,6 +116,7 @@ void MySql::executeSQL(const string &sql) {
         }
     }
     freeConnection(conn);
+    return true;
 }
 
 MySql::~MySql() {
@@ -130,7 +131,6 @@ MySql::~MySql() {
         }
         condition.notify(mutex);
     }
-    TimeSystem::deleteTicker(uuid);
 }
 
 vector<vector<unordered_map<string, string>>> MySql::queryData(const string &sql) {
@@ -138,7 +138,7 @@ vector<vector<unordered_map<string, string>>> MySql::queryData(const string &sql
     if (mysql_real_query(&conn->conn, sql.data(), sql.size()) != 0) {
         std::cerr << mysql_error(&conn->conn) << std::endl;
         freeConnection(conn);
-        throw std::runtime_error("执行SQL失败");
+        return vector<vector<unordered_map<string, string>>>();
     }
     vector<vector<unordered_map<string, string>>> result;
     while (true) {

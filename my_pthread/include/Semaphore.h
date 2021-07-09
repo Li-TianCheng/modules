@@ -10,8 +10,8 @@
 class Semaphore {
 public:
     Semaphore(int num);
-    void wait();
-    void post();
+    bool wait();
+    bool post();
     ~Semaphore();
     Semaphore(const Semaphore&) = delete;
     Semaphore(Semaphore&&) = delete;

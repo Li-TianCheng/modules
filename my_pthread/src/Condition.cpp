@@ -12,13 +12,14 @@ Condition::Condition():condition(){
     }
 }
 
-void Condition::wait(Mutex& mutex) {
+bool Condition::wait(Mutex& mutex) {
     if (pthread_cond_wait(&condition, &(mutex.mutex)) != 0){
-        throw std::runtime_error("条件变量等待错误");
+        return false;
     }
+    return true;
 }
 
-void Condition::wait(Mutex& mutex, const unsigned int timeout) {
+int Condition::wait(Mutex& mutex, const unsigned int timeout) {
     struct timeval now;
     struct timespec tmpTimeout;
     gettimeofday(&now, nullptr);
@@ -26,25 +27,28 @@ void Condition::wait(Mutex& mutex, const unsigned int timeout) {
     tmpTimeout.tv_nsec = now.tv_usec * 1000 + timeout % 1000 * 1000 * 1000;
     int status = pthread_cond_timedwait(&condition, &(mutex.mutex), &tmpTimeout);
     if (status == ETIMEDOUT) {
-        return;
+        return 1;
     }
     if (status != 0){
-        throw std::runtime_error("条件变量等待错误");
+        return -1;
     }
+    return 0;
 }
 
-void Condition::notify(Mutex& mutex) {
+bool Condition::notify(Mutex& mutex) {
     if (pthread_cond_signal(&condition) != 0){
-        throw std::runtime_error("条件变量唤醒错误");
+        return false;
     }
     mutex.unlock();
+    return true;
 }
 
-void Condition::notifyAll(Mutex& mutex) {
+bool Condition::notifyAll(Mutex& mutex) {
     if (pthread_cond_broadcast(&condition) != 0){
-        throw std::runtime_error("条件变量唤醒错误");
+        return false;
     }
     mutex.unlock();
+    return true;
 }
 
 Condition::~Condition(){

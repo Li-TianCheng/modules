@@ -9,6 +9,7 @@ enum EventKey{
     EventEndCycle,
     EventTimer,
     EventTicker,
+    EventDeleteTicker,
     EventAddSession,
     EventTimerTimeOut,
     EventTickerTimeOut,

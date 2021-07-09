@@ -39,7 +39,7 @@ void ProgressBar::stop() {
 }
 
 void ProgressBar::cycleInit() {
-    uuid = TimeSystem::receiveEvent(EventTicker, updateTime);
+    TimeSystem::receiveEvent(EventTicker, updateTime);
     for (int i = 0; i < 60-title.size(); i++){
         cout << " ";
     }
@@ -48,7 +48,7 @@ void ProgressBar::cycleInit() {
 }
 
 void ProgressBar::cycleClear() {
-    TimeSystem::deleteTicker(uuid);
+    TimeSystem::deleteTicker(updateTime);
 }
 
 void ProgressBar::draw() {

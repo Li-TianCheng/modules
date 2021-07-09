@@ -16,11 +16,10 @@ void TimeSystem::close() {
     getThread().join();
 }
 
-string TimeSystem::receiveEvent(EventKey eventType, shared_ptr<Time> arg) {
+void TimeSystem::receiveEvent(EventKey eventType, shared_ptr<Time> arg) {
     arg->tPtr = &getTimeWheel();
     auto e = ObjPool::allocate<Event>(eventType, arg);
     getTimeWheel().receiveEvent(e);
-    return arg->uuid;
 }
 
 TimeWheel &TimeSystem::getTimeWheel() {
@@ -33,7 +32,8 @@ Thread &TimeSystem::getThread() {
     return thread;
 }
 
-void TimeSystem::deleteTicker(const string& uuid) {
-    getTimeWheel().deleteTicker(uuid);
+void TimeSystem::deleteTicker(shared_ptr<Time> arg) {
+    auto e = ObjPool::allocate<Event>(EventDeleteTicker, arg);
+    getTimeWheel().receiveEvent(e);
 }
 

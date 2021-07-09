@@ -12,7 +12,7 @@ class ManageChunk {
 public:
     explicit ManageChunk(size_t size, int num);
     void* allocate(int num);
-    void deallocate(void* ptr, int num);
+    bool deallocate(void* ptr, int num);
     ~ManageChunk();
 private:
     MemChunk* head;

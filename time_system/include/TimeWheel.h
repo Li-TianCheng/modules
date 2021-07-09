@@ -19,7 +19,6 @@ class TimeWheel: public EventSystem {
 public:
     TimeWheel();
     ~TimeWheel() override;
-    void deleteTicker(const string& uuid);
     static void* timeWheelCycle(void* arg);
     TimeWheel(const TimeWheel&) = delete;
     TimeWheel(TimeWheel&&) = delete;
@@ -29,13 +28,14 @@ private:
     void init();
     void addTimeToWheel(EventKey e, shared_ptr<Time> t);
     void update();
+    static void handleDeleteTicker(shared_ptr<void> arg);
     static void handleTimerEvent(shared_ptr<void> arg);
     static void handleTickerEvent(shared_ptr<void> arg);
     static void handleTimerTimeOut(shared_ptr<void> arg);
     static void handleTickerTimeOut(shared_ptr<void> arg);
     static void handleEndCycle(shared_ptr<void> arg);
 private:
-    unordered_set<string> toDelete;
+    unordered_set<shared_ptr<Time>> toDelete;
     vector<queue<shared_ptr<Event>>> millisecond;
     vector<queue<shared_ptr<Event>>> second;
     vector<queue<shared_ptr<Event>>> minute;
@@ -46,7 +46,6 @@ private:
     int sIter;
     int mIter;
     int hIter;
-    Mutex mutex;
 };
 
 struct TimeWheelEventArg {

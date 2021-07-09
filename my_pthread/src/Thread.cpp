@@ -12,18 +12,20 @@ void Thread::run(void *(*handle)(void *), void* arg) {
     isRunning = true;
 }
 
-void Thread::join() {
+bool Thread::join() {
     if (pthread_join(threadID, &result) != 0){
-        throw std::runtime_error("线程连接错误");
+        return false;
     }
     isRunning = false;
+    return true;
 }
 
-void Thread::cancel() {
+bool Thread::cancel() {
     if (pthread_cancel(threadID) != 0){
-        throw std::runtime_error("线程取消错误");
+        return false;
     }
     isRunning = false;
+    return true;
 }
 
 pthread_t Thread::getID() const {
@@ -38,9 +40,10 @@ void* Thread::getResult() const {
     return result;
 }
 
-void Thread::detach() {
+bool Thread::detach() {
     if (pthread_detach(threadID) != 0){
-        throw std::runtime_error("线程分离错误");
+        return false;
     }
     isRunning = false;
+    return true;
 }

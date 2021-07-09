@@ -10,9 +10,9 @@
 class SpinLock {
 public:
     SpinLock();
-    void lock();
-    void unlock();
-    bool tryLock();
+    bool lock();
+    bool unlock();
+    int tryLock();
     ~SpinLock();
     SpinLock(const SpinLock&) = delete;
     SpinLock(SpinLock&&) = delete;

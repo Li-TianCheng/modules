@@ -32,7 +32,7 @@ public:
     MySql(const string &userName, const string &password, const string &dataBase, const string& host="localhost", int port=3306);
     void connect();
     void close();
-    void executeSQL(const string& sql);
+    bool executeSQL(const string& sql);
     vector<vector<unordered_map<string, string>>> queryData(const string& sql);
     ~MySql() override;
 private:
@@ -52,7 +52,6 @@ private:
     const int port;
     shared_ptr<Connection> free;
     shared_ptr<Time> checkTime;
-    string uuid;
     Mutex mutex;
     std::atomic<int> connNum;
     Condition condition;

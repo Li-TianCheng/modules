@@ -24,7 +24,7 @@ static const int ReadBufferSize = 256;
 class TcpClient {
 public:
     TcpClient(const string& address, AddressType addressType);
-    void connect();
+    bool connect();
     void write(const char* c, int n);
     void close();
     string read();
