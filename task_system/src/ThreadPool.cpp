@@ -45,6 +45,7 @@ void ThreadPool::cycleInit() {
 }
 
 void ThreadPool::cycleClear() {
+    t->ePtr = nullptr;
     TimeSystem::deleteTicker(t);
     join();
 }

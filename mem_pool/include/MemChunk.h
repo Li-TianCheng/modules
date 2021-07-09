@@ -16,13 +16,14 @@ public:
 private:
     friend class ManageChunk;
     struct obj{
-        obj* next;
+        int next;
     };
+    int num;
+    size_t size;
     obj* free;
     obj* start;
     MemChunk* prev;
     MemChunk* next;
-    int num;
 };
 
 

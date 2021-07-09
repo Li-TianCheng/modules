@@ -6,7 +6,7 @@
 #include <malloc.h>
 #include <new>
 
-MemChunk::MemChunk(int num, size_t size):num(num), free(nullptr), start(nullptr), prev(nullptr), next(nullptr){
+MemChunk::MemChunk(int num, size_t size):num(num), free(nullptr), start(nullptr), prev(nullptr), next(nullptr), size(size){
     while (true){
         free = (obj*)malloc(num * size);
         if (free != nullptr){
@@ -17,22 +17,24 @@ MemChunk::MemChunk(int num, size_t size):num(num), free(nullptr), start(nullptr)
     }
     start = free;
     for (int i = 0; i < num-1; i++){
-        free->next = (obj*)((char*)free+size);
-        free = free->next;
+        free->next = i+1;
+        free = (obj*)((char*)free+size);
     }
-    free->next = nullptr;
     free = start;
-};
+}
 
 void* MemChunk::allocate() {
+    if (num == 0) {
+        return nullptr;
+    }
     obj* curr = free;
-    free = free->next;
+    free = (obj*)((char*)start+(free->next)*size);
     num--;
     return curr;
 }
 
 void MemChunk::deallocate(void *ptr) {
-    ((obj*)ptr)->next = free;
+    ((obj*)ptr)->next = ((char*)free-(char*)start) / size;
     free = (obj*)ptr;
     num++;
 }

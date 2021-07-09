@@ -5,32 +5,32 @@
 #include "MemPool.h"
 
 MemPool::MemPool(int num):mutex(126), num(num){
-    for (int i = 0; i < 127; i++){
-        mem.emplace_back(8+i*4, num);
+    for (int i = 0; i < 128; i++){
+        mem.emplace_back(4+i*4, num);
     }
 }
 
 void* MemPool::allocate(size_t size) {
-    if (size < 8 || size > 512){
+    if (size < 4 || size > 512){
         void* ptr = ::malloc(size);
         if (ptr == nullptr) {
             throw std::runtime_error("内存分配错误");
         }
         return ptr;
     }
-    mutex[(size-8)/4].lock();
-    void* ptr = mem[(size-8)/4].allocate(num);
-    mutex[(size-8)/4].unlock();
+    mutex[(size-4)/4].lock();
+    void* ptr = mem[(size-4)/4].allocate(num);
+    mutex[(size-4)/4].unlock();
     return ptr;
 }
 
 void MemPool::deallocate(void *ptr, size_t size) {
-    if (size < 8 || size > 512){
+    if (size < 4 || size > 512){
         ::free(ptr);
         return;
     }
-    mutex[(size-8)/4].lock();
-    mem[(size-8)/4].deallocate(ptr, num);
-    mutex[(size-8)/4].unlock();
+    mutex[(size-4)/4].lock();
+    mem[(size-4)/4].deallocate(ptr, num);
+    mutex[(size-4)/4].unlock();
 }
 

@@ -48,6 +48,7 @@ void ProgressBar::cycleInit() {
 }
 
 void ProgressBar::cycleClear() {
+    updateTime->ePtr = nullptr;
     TimeSystem::deleteTicker(updateTime);
 }
 

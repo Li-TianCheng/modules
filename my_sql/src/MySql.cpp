@@ -17,6 +17,7 @@ void MySql::init() {
 }
 
 void MySql::cycleClear() {
+    checkTime->ePtr = nullptr;
     TimeSystem::deleteTicker(checkTime);
 }
 
