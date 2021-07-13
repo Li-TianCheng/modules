@@ -7,6 +7,7 @@
 MySql::MySql(const string &userName, const string &password, const string &dataBase, const string &host,
              int port) : userName(userName), password(password), checkTime(nullptr),
              dataBase(dataBase), host(host), port(port), free(nullptr), connNum(0) {
+    mysql_library_init;
     init();
 }
 
@@ -129,6 +130,7 @@ MySql::~MySql() {
         }
         condition.notify(mutex);
     }
+    mysql_library_end();
 }
 
 vector<vector<unordered_map<string, string>>> MySql::queryData(const string &sql) {
