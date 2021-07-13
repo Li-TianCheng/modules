@@ -25,7 +25,7 @@ private:
     static unordered_map<string, void(*)(shared_ptr<Http>, shared_ptr<Http>)>& getRegexMux();
     static unordered_map<string, void(*)(shared_ptr<Http>, shared_ptr<Http>)>& getMux();
 private:
-    TcpServer<HttpSession> server;
+    shared_ptr<TcpServer<HttpSession>> server;
 };
 
 

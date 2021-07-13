@@ -6,24 +6,23 @@
 
 void TimeSystem::init() {
     getTimeWheel();
-    getThread().run(getTimeWheel().timeWheelCycle, &getTimeWheel());
+    getThread().run(handle, nullptr);
 }
 
 void TimeSystem::close() {
-    auto arg = ObjPool::allocate<TimeWheel*>(&getTimeWheel());
-    auto e = ObjPool::allocate<Event>(EventEndCycle, arg);
-    getTimeWheel().receiveEvent(e);
+    auto e = ObjPool::allocate<Event>(EventEndCycle, getTimeWheel());
+    getTimeWheel()->receiveEvent(e);
     getThread().join();
 }
 
 void TimeSystem::receiveEvent(EventKey eventType, shared_ptr<Time> arg) {
-    arg->tPtr = &getTimeWheel();
+    arg->tPtr = getTimeWheel();
     auto e = ObjPool::allocate<Event>(eventType, arg);
-    getTimeWheel().receiveEvent(e);
+    getTimeWheel()->receiveEvent(e);
 }
 
-TimeWheel &TimeSystem::getTimeWheel() {
-    static TimeWheel timeWheel;
+shared_ptr<TimeWheel> TimeSystem::getTimeWheel() {
+    static shared_ptr<TimeWheel> timeWheel = ObjPool::allocate<TimeWheel>();
     return timeWheel;
 }
 
@@ -34,6 +33,10 @@ Thread &TimeSystem::getThread() {
 
 void TimeSystem::deleteTicker(shared_ptr<Time> arg) {
     auto e = ObjPool::allocate<Event>(EventDeleteTicker, arg);
-    getTimeWheel().receiveEvent(e);
+    getTimeWheel()->receiveEvent(e);
+}
+
+void *TimeSystem::handle(void *) {
+    getTimeWheel()->timeWheelCycle();
 }
 

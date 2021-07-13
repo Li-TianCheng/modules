@@ -19,7 +19,7 @@ class TimeWheel: public EventSystem {
 public:
     TimeWheel();
     ~TimeWheel() override;
-    static void* timeWheelCycle(void* arg);
+    void timeWheelCycle();
     TimeWheel(const TimeWheel&) = delete;
     TimeWheel(TimeWheel&&) = delete;
     TimeWheel& operator=(const TimeWheel&) = delete;

@@ -29,20 +29,19 @@ class TcpServer;
 template<typename T>
 class EpollTask : public EventSystem {
 public:
-    explicit EpollTask(TcpServer<T>* server);
+    explicit EpollTask(std::weak_ptr<TcpServer<T>> server);
     bool isRunning();
     ~EpollTask() override;
     void close();
+    void run();
 private:
     friend class TcpServer<T>;
     void init();
-    void epollCycle();
     void addNewSession(shared_ptr<TcpSession> session);
     void delSession(int fd);
     static void cycleTask(shared_ptr<void> arg);
     static void handleTickerTimeOut(shared_ptr<void> arg);
     static void handleTimerTimeOut(shared_ptr<void> arg);
-    static void handleDeleteTicker(shared_ptr<void> arg);
     static void handleTicker(shared_ptr<void> arg);
     static void handleTimer(shared_ptr<void> arg);
     static void readTask(shared_ptr<void> arg);
@@ -56,19 +55,18 @@ private:
     std::atomic<int> sessionNum;
     int epollFd;
     int waitTime;
-    TcpServer<T>* server;
+    std::weak_ptr<TcpServer<T>> server;
     unordered_map<int, shared_ptr<TcpSession>> sessionManager;
     unordered_map<shared_ptr<Time>, int> timeToFd;
 };
 
 template<typename T> inline
-EpollTask<T>::EpollTask(TcpServer<T>* server) : running(false), server(server), needClose(false), sessionNum(0), waitTime(WaitTime) {
+EpollTask<T>::EpollTask(std::weak_ptr<TcpServer<T>> server) : running(false), server(server), needClose(false), sessionNum(0), waitTime(WaitTime) {
     epollFd = epoll_create(1);
     if (epollFd == -1) {
         throw std::runtime_error("epoll 申请错误");
     }
     init();
-    epollCycle();
 }
 
 template<typename T> inline
@@ -80,9 +78,8 @@ EpollTask<T>::~EpollTask() {
 }
 
 template<typename T> inline
-void EpollTask<T>::epollCycle() {
-    auto arg = ObjPool::allocate<EpollTask<T>*>(this);
-    TaskSystem::addTask(cycleTask, arg);
+void EpollTask<T>::run() {
+    TaskSystem::addTask(cycleTask, shared_from_this());
 }
 
 template<typename T> inline
@@ -95,13 +92,12 @@ void EpollTask<T>::init() {
     registerEvent(EventTicker, handleTicker);
     registerEvent(EventTimer, handleTimer);
     registerEvent(EventAddSession, handleAddSession);
-    registerEvent(EventDeleteTicker, handleDeleteTicker);
 }
 
 template<typename T>
 void EpollTask<T>::handleAddSession(shared_ptr<void> arg) {
     auto session = static_pointer_cast<TcpSession>(arg);
-    ((EpollTask<T>*)session->epoll)->addNewSession(session);
+    static_pointer_cast<EpollTask<T>>(session->epoll)->addNewSession(session);
 }
 
 template<typename T> inline
@@ -131,30 +127,30 @@ void EpollTask<T>::delSession(int fd) {
 template<typename T> inline
 void EpollTask<T>::handleTickerTimeOut(shared_ptr<void> arg) {
     auto t = static_pointer_cast<Time>(arg);
-    EpollTask<T>* e = (EpollTask<T>*)t->ePtr;
+    auto e = static_pointer_cast<EpollTask<T>>(t->ePtr.lock());
+    if (e == nullptr) {
+        TimeSystem::deleteTicker(t);
+        return;
+    }
     if (e->timeToFd.find(t) != e->timeToFd.end()) {
         int fd = e->timeToFd[t];
         if (e->sessionManager.find(fd) != e->sessionManager.end()) {
             e->sessionManager[fd]->handleTimerTimeOut(t->uuid);
         } else {
+            e->timeToFd.erase(t);
             TimeSystem::deleteTicker(t);
         }
     }
 }
 
 template<typename T> inline
-void EpollTask<T>::handleDeleteTicker(shared_ptr<void> arg) {
-    auto t = static_pointer_cast<Time>(arg);
-    EpollTask<T>* e = (EpollTask<T>*)t->ePtr;
-    if (e->timeToFd.find(t) != e->timeToFd.end()) {
-        e->timeToFd.erase(t);
-    }
-}
-
-template<typename T> inline
 void EpollTask<T>::handleTimerTimeOut(shared_ptr<void> arg) {
     auto t = static_pointer_cast<Time>(arg);
-    EpollTask<T>* e = (EpollTask<T>*)t->ePtr;
+    auto e = static_pointer_cast<EpollTask<T>>(t->ePtr.lock());
+    if (e == nullptr) {
+        TimeSystem::deleteTicker(t);
+        return;
+    }
     if (e->timeToFd.find(t) != e->timeToFd.end()) {
         int fd = e->timeToFd[t];
         if (e->sessionManager.find(fd) != e->sessionManager.end()) {
@@ -168,7 +164,11 @@ template<typename T> inline
 void EpollTask<T>::handleTicker(shared_ptr<void> arg) {
     auto session = static_pointer_cast<EpollEventArg>(arg)->session;
     auto t = static_pointer_cast<EpollEventArg>(arg)->t;
-    EpollTask<T>* e = (EpollTask<T>*)t->ePtr;
+    auto e = static_pointer_cast<EpollTask<T>>(t->ePtr.lock());
+    if (e == nullptr) {
+        TimeSystem::deleteTicker(t);
+        return;
+    }
     if (e->sessionManager.find(session->epollEvent.data.fd) != e->sessionManager.end()) {
         e->timeToFd[t] = session->epollEvent.data.fd;
         TimeSystem::receiveEvent(EventTicker, t);
@@ -179,7 +179,11 @@ template<typename T> inline
 void EpollTask<T>::handleTimer(shared_ptr<void> arg) {
     auto session = static_pointer_cast<EpollEventArg>(arg)->session;
     auto t = static_pointer_cast<EpollEventArg>(arg)->t;
-    EpollTask<T>* e = (EpollTask<T>*)t->ePtr;
+    auto e = static_pointer_cast<EpollTask<T>>(t->ePtr.lock());
+    if (e == nullptr) {
+        TimeSystem::deleteTicker(t);
+        return;
+    }
     if (e->sessionManager.find(session->epollEvent.data.fd) != e->sessionManager.end()) {
         e->timeToFd[t] = session->epollEvent.data.fd;
         TimeSystem::receiveEvent(EventTimer, t);
@@ -267,7 +271,7 @@ void EpollTask<T>::writeTask(shared_ptr<void> arg) {
 
 template<typename T> inline
 void EpollTask<T>::cycleTask(shared_ptr<void> arg) {
-    EpollTask<T>* epoll = *static_pointer_cast<EpollTask<T>*>(arg);
+    auto epoll = static_pointer_cast<EpollTask<T>>(arg);
     epoll->running = true;
     epoll->cycleInit();
     while (!epoll->needClose || epoll->sessionNum != 0 || !epoll->timeToFd.empty()) {
@@ -308,7 +312,7 @@ void EpollTask<T>::cycleTask(shared_ptr<void> arg) {
 
 template<typename T> inline
 void EpollTask<T>::handleCloseConnection(shared_ptr<void> arg) {
-    auto session = *static_pointer_cast<TcpSession*>(arg);
+    auto session = static_pointer_cast<TcpSession>(arg);
     session->mutex.lock();
     if (session->msgQueue.empty()) {
         ::shutdown(session->epollEvent.data.fd, SHUT_RD);
@@ -319,8 +323,8 @@ void EpollTask<T>::handleCloseConnection(shared_ptr<void> arg) {
 
 template<typename T> inline
 void EpollTask<T>::handleCloseListen(shared_ptr<void> arg) {
-    auto session = *static_pointer_cast<TcpSession*>(arg);
-    ((EpollTask<T>*)session->epoll)->server->close();
+    auto session = static_pointer_cast<TcpSession>(arg);
+    static_pointer_cast<EpollTask<T>>(session->epoll)->server.lock()->close();
 }
 
 template<typename T>

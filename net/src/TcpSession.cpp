@@ -60,16 +60,14 @@ void TcpSession::closeConnection() {
     isCloseConnection = true;
     mutex.lock();
     if (msgQueue.empty()) {
-        auto arg = ObjPool::allocate<TcpSession*>(this);
-        auto e = ObjPool::allocate<Event>(EventCloseConnection, arg);
+        auto e = ObjPool::allocate<Event>(EventCloseConnection, shared_from_this());
         epoll->receiveEvent(e);
     }
     mutex.unlock();
 }
 
 void TcpSession::closeListen() {
-    auto arg = ObjPool::allocate<TcpSession*>(this);
-    auto e = ObjPool::allocate<Event>(EventCloseListen, arg);
+    auto e = ObjPool::allocate<Event>(EventCloseListen, shared_from_this());
     epoll->receiveEvent(e);
 }
 
@@ -82,16 +80,16 @@ void TcpSession::sessionClear() {
 }
 
 const string& TcpSession::addTicker(int h, int m, int s, int ms) {
-    auto t = ObjPool::allocate<Time>(h, m, s, ms, epoll);
-    auto arg = ObjPool::allocate<EpollEventArg>(t, this);
+    auto t = ObjPool::allocate<Time>(h, m, s, ms, epoll->shared_from_this());
+    auto arg = ObjPool::allocate<EpollEventArg>(t, shared_from_this());
     auto e = ObjPool::allocate<Event>(EventTicker, arg);
     epoll->receiveEvent(e);
     return t->uuid;
 }
 
 const string& TcpSession::addTimer(int h, int m, int s, int ms) {
-    auto t = ObjPool::allocate<Time>(h, m, s, ms, epoll);
-    auto arg = ObjPool::allocate<EpollEventArg>(t, this);
+    auto t = ObjPool::allocate<Time>(h, m, s, ms, epoll->shared_from_this());
+    auto arg = ObjPool::allocate<EpollEventArg>(t, shared_from_this());
     auto e = ObjPool::allocate<Event>(EventTimer, arg);
     epoll->receiveEvent(e);
     return t->uuid;

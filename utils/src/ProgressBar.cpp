@@ -10,9 +10,8 @@ ProgressBar::ProgressBar(const string &title, int num) :curr(0,0,0,0,nullptr), u
 }
 
 void ProgressBar::start() {
-    updateTime = ObjPool::allocate<Time>(0,0,0,500,this);
-    auto arg = ObjPool::allocate<ProgressBar*>(this);
-    TaskSystem::addTask(cycleTask, arg);
+    updateTime = ObjPool::allocate<Time>(0,0,0,500,shared_from_this());
+    TaskSystem::addTask(cycleTask, shared_from_this());
 }
 
 void ProgressBar::done() {
@@ -29,7 +28,7 @@ void ProgressBar::init() {
 }
 
 void ProgressBar::handleTimeOut(shared_ptr<void> arg) {
-    ((ProgressBar*)(static_pointer_cast<Time>(arg))->ePtr)->draw();
+    static_pointer_cast<ProgressBar>(static_pointer_cast<Time>(arg)->ePtr.lock())->draw();
 }
 
 void ProgressBar::stop() {
@@ -48,7 +47,6 @@ void ProgressBar::cycleInit() {
 }
 
 void ProgressBar::cycleClear() {
-    updateTime->ePtr = nullptr;
     TimeSystem::deleteTicker(updateTime);
 }
 

@@ -20,8 +20,9 @@ public:
     TimeSystem& operator=(const TimeSystem&) = delete;
     TimeSystem& operator=(TimeSystem&&) = delete;
 private:
+    static void* handle(void*);
     TimeSystem() = default;
-    static TimeWheel& getTimeWheel();
+    static shared_ptr<TimeWheel> getTimeWheel();
     static Thread& getThread();
 };
 

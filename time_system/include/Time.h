@@ -12,7 +12,7 @@ class TimeWheel;
 
 class Time {
 public:
-    Time(int h, int m, int s, int ms, EventSystem* ePtr);
+    Time(int h, int m, int s, int ms, shared_ptr<EventSystem> ePtr);
     Time& operator+=(const Time& t);
 public:
     int ms;
@@ -20,8 +20,8 @@ public:
     int m;
     int h;
     string uuid;
-    EventSystem* ePtr;
-    TimeWheel* tPtr;
+    std::weak_ptr<EventSystem> ePtr;
+    std::weak_ptr<TimeWheel> tPtr;
 };
 
 

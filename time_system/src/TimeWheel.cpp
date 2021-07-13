@@ -22,34 +22,34 @@ void TimeWheel::handleTimerEvent(shared_ptr<void> arg) {
     if (arg == nullptr){
         return;
     }
-    static_pointer_cast<Time>(arg)->tPtr->addTimeToWheel(EventTimerTimeOut, static_pointer_cast<Time>(arg));
+    static_pointer_cast<Time>(arg)->tPtr.lock()->addTimeToWheel(EventTimerTimeOut, static_pointer_cast<Time>(arg));
 }
 
 void TimeWheel::handleTickerEvent(shared_ptr<void> arg) {
     if (arg == nullptr){
         return;
     }
-    static_pointer_cast<Time>(arg)->tPtr->addTimeToWheel(EventTickerTimeOut, static_pointer_cast<Time>(arg));
+    static_pointer_cast<Time>(arg)->tPtr.lock()->addTimeToWheel(EventTickerTimeOut, static_pointer_cast<Time>(arg));
 }
 
 void TimeWheel::handleTimerTimeOut(shared_ptr<void> arg) {
     auto t = static_pointer_cast<TimeWheelEventArg>(arg)->t;
-    if (t->ePtr != nullptr){
+    if (t->ePtr.lock() != nullptr){
         auto e = ObjPool::allocate<Event>(EventTimerTimeOut, t);
-        t->ePtr->receiveEvent(e);
+        t->ePtr.lock()->receiveEvent(e);
     }
 }
 
 void TimeWheel::handleTickerTimeOut(shared_ptr<void> arg) {
     auto t = static_pointer_cast<TimeWheelEventArg>(arg)->t;
-    TimeWheel* tPtr = t->tPtr;
-    if (tPtr->toDelete.find(t) != tPtr->toDelete.end()){
-        tPtr->toDelete.erase(t);
+    auto tPtr = t->tPtr;
+    if (tPtr.lock()->toDelete.find(t) != tPtr.lock()->toDelete.end()){
+        tPtr.lock()->toDelete.erase(t);
         return;
     }
-    if (t->ePtr != nullptr){
+    if (t->ePtr.lock() != nullptr){
         auto e = ObjPool::allocate<Event>(EventTickerTimeOut, t);
-        t->ePtr->receiveEvent(e);
+        t->ePtr.lock()->receiveEvent(e);
     }
     handleTickerEvent(t);
 }
@@ -59,15 +59,12 @@ void TimeWheel::handleDeleteTicker(shared_ptr<void> arg) {
         return;
     }
     auto t = static_pointer_cast<Time>(arg);
-    t->tPtr->toDelete.insert(t);
-    if (t->ePtr != nullptr) {
-        auto e = ObjPool::allocate<Event>(EventDeleteTicker, t);
-        t->ePtr->receiveEvent(e);
-    }
+    t->ePtr.lock() = nullptr;
+    t->tPtr.lock()->toDelete.insert(t);
 }
 
 void TimeWheel::addTimeToWheel(EventKey e, shared_ptr<Time> t) {
-    auto nextTime = ObjPool::allocate<Time>(t->h+hIter, t->m+mIter, t->s+sIter, t->ms+msIter, t->ePtr);
+    auto nextTime = ObjPool::allocate<Time>(t->h+hIter, t->m+mIter, t->s+sIter, t->ms+msIter, t->ePtr.lock());
     nextTime->s += nextTime->ms / 1000;
     nextTime->m += nextTime->s / 60;
     nextTime->h += nextTime->m / 60;
@@ -99,13 +96,12 @@ TimeWheel::~TimeWheel() {
     ::close(epollFd);
 }
 
-void *TimeWheel::timeWheelCycle(void *arg) {
-    TimeWheel* t = (TimeWheel*)arg;
-    t->cycleInit();
-    while (!t->shutdown) {
-        t->cycleNoBlock(-1);
-        epoll_wait(t->epollFd, nullptr, 1, 1);
-        t->update();
+void TimeWheel::timeWheelCycle() {
+    cycleInit();
+    while (!shutdown) {
+        cycleNoBlock(-1);
+        epoll_wait(epollFd, nullptr, 1, 1);
+        update();
     }
 }
 
@@ -152,6 +148,6 @@ void TimeWheel::update() {
 }
 
 void TimeWheel::handleEndCycle(shared_ptr<void> arg) {
-    (*static_pointer_cast<TimeWheel*>(arg))->shutdown = true;
+    (static_pointer_cast<TimeWheel>(arg))->shutdown = true;
 }
 

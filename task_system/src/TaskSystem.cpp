@@ -11,16 +11,16 @@ void TaskSystem::init() {
 
 void TaskSystem::close() {
     auto e = ObjPool::allocate<Event>(EventEndCycle, nullptr);
-    getThreadPool().receiveEvent(e);
+    getThreadPool()->receiveEvent(e);
     getThread().join();
 }
 
 void TaskSystem::addTask(void (*task)(shared_ptr<void>), shared_ptr<void> arg) {
-    getThreadPool().addTask(task, arg);
+    getThreadPool()->addTask(task, arg);
 }
 
-ThreadPool &TaskSystem::getThreadPool() {
-    static ThreadPool threadPool(InitThreadNum, MaxThreadNum, TaskQueueSize);
+shared_ptr<ThreadPool> TaskSystem::getThreadPool() {
+    static shared_ptr<ThreadPool> threadPool = ObjPool::allocate<ThreadPool>(InitThreadNum, MaxThreadNum, TaskQueueSize);
     return threadPool;
 }
 
@@ -30,9 +30,9 @@ Thread &TaskSystem::getThread() {
 }
 
 void *TaskSystem::handle(void *) {
-    getThreadPool().cycle();
+    getThreadPool()->cycle();
 }
 
 void TaskSystem::addPriorityTask(void (*task)(shared_ptr<void>), shared_ptr<void> arg) {
-    getThreadPool().addPriorityTask(task, arg);
+    getThreadPool()->addPriorityTask(task, arg);
 }

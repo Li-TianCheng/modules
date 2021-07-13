@@ -4,16 +4,16 @@
 
 #include "http/include/HttpServer.h"
 
-HttpServer::HttpServer(int port, AddressType addressType) : server(port, addressType) {
-
+HttpServer::HttpServer(int port, AddressType addressType) {
+    server = ObjPool::allocate<TcpServer<HttpSession>>(port, addressType);
 }
 
 void HttpServer::serve() {
-    server.serve();
+    server->serve();
 }
 
 void HttpServer::close() {
-    server.close();
+    server->close();
 }
 
 void HttpServer::registerHandler(const string &pattern, void (*handle)(shared_ptr<Http>, shared_ptr<Http>)) {

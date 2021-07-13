@@ -61,17 +61,10 @@ void EventSystem::cycleInit() {}
 
 void EventSystem::cycleClear() {}
 
-EventSystem::~EventSystem() {
-    while (!eventQueue.empty()){
-        shared_ptr<Event> e = eventQueue.front();
-        eventQueue.pop();
-    }
-}
-
 EventSystem::EventSystem() : shutdown(false) {}
 
 void EventSystem::cycleTask(shared_ptr<void> arg) {
-    (*static_pointer_cast<EventSystem*>(arg))->cycle();
+    (static_pointer_cast<EventSystem>(arg))->cycle();
 }
 
 void EventSystem::cycleNoBlock(int maxNum) {
@@ -86,7 +79,7 @@ void EventSystem::cycleNoBlock(int maxNum) {
         eventQueue.pop();
     }
     mutex.unlock();
-    for (auto& e : temp) {
+    for (auto e : temp) {
         if (e->eventType == EventEndCycle){
             doEvent(e);
             shutdown = true;

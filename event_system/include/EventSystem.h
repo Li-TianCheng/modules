@@ -25,7 +25,7 @@ struct Event{
     Event(EventKey eventType, shared_ptr<void> arg) : eventType(eventType), arg(arg){};
 };
 
-class EventSystem {
+class EventSystem: public std::enable_shared_from_this<EventSystem> {
 public:
     EventSystem();
     void registerEvent(EventKey eventType, void (*handleEvent)(shared_ptr<void>));
@@ -38,7 +38,7 @@ public:
     static void cycleTask(shared_ptr<void> arg);
     virtual void cycleInit();
     virtual void cycleClear();
-    virtual ~EventSystem();
+    virtual ~EventSystem() = default;
     EventSystem(const EventSystem &) = delete;
     EventSystem(EventSystem&&) = delete;
     EventSystem& operator=(const EventSystem&) = delete;

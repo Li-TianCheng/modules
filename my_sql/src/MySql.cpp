@@ -17,12 +17,11 @@ void MySql::init() {
 }
 
 void MySql::cycleClear() {
-    checkTime->ePtr = nullptr;
     TimeSystem::deleteTicker(checkTime);
 }
 
 void MySql::handleTimeOut(shared_ptr<void> arg) {
-    ((MySql*)(static_pointer_cast<Time>(arg))->ePtr)->decreasePool();
+    static_pointer_cast<MySql>(static_pointer_cast<Time>(arg)->ePtr.lock())->decreasePool();
 }
 
 void MySql::close() {
@@ -32,17 +31,15 @@ void MySql::close() {
 
 void MySql::connect() {
     increasePool();
-    auto arg = ObjPool::allocate<MySql*>(this);
-    TaskSystem::addTask(cycleTask, arg);
-    checkTime = ObjPool::allocate<Time>(0, 0, 1, 0, this);
+    TaskSystem::addTask(cycleTask, shared_from_this());
+    checkTime = ObjPool::allocate<Time>(0, 0, 1, 0, shared_from_this());
     TimeSystem::receiveEvent(EventTicker, checkTime);
 }
 
 shared_ptr<Connection> MySql::getConnection() {
     mutex.lock();
     while (free == nullptr) {
-        auto arg = ObjPool::allocate<MySql*>(this);
-        auto e = ObjPool::allocate<Event>(EventIncreasePool, arg);
+        auto e = ObjPool::allocate<Event>(EventIncreasePool, shared_from_this());
         receiveEvent(e);
         condition.wait(mutex);
     }
@@ -53,7 +50,7 @@ shared_ptr<Connection> MySql::getConnection() {
 }
 
 void MySql::handleIncreasePool(shared_ptr<void> arg) {
-    (*static_pointer_cast<MySql*>(arg))->increasePool();
+    (static_pointer_cast<MySql>(arg))->increasePool();
 }
 
 void MySql::decreasePool() {

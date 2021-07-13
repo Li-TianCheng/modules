@@ -27,7 +27,7 @@ struct Msg {
     }
 };
 
-class TcpSession {
+class TcpSession: public std::enable_shared_from_this<TcpSession> {
 public:
     TcpSession();
     void write(shared_ptr<vector<char>> sendMsg);
@@ -54,7 +54,7 @@ protected:
     std::atomic<bool> isRead;
     deque<Msg> msgQueue;
     Mutex mutex;
-    EventSystem* epoll;
+    shared_ptr<EventSystem> epoll;
     int epollFd;
     sockaddr address;
     socklen_t len;
@@ -64,8 +64,8 @@ protected:
 
 struct EpollEventArg {
     shared_ptr<Time> t;
-    TcpSession* session;
-    EpollEventArg(shared_ptr<Time> t, TcpSession* session) : t(t), session(session) {};
+    shared_ptr<TcpSession> session;
+    EpollEventArg(shared_ptr<Time> t, shared_ptr<TcpSession> session) : t(t), session(session) {};
 };
 
 #endif //NET_TCPSESSION_H

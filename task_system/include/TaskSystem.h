@@ -23,7 +23,7 @@ public:
     TaskSystem& operator=(TaskSystem&&) = delete;
 private:
     TaskSystem() = default;
-    static ThreadPool& getThreadPool();
+    static shared_ptr<ThreadPool> getThreadPool();
     static Thread& getThread();
     static void* handle(void*);
 };

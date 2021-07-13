@@ -17,8 +17,7 @@ void ThreadPool::addTask(void (*task)(shared_ptr<void>), shared_ptr<void> arg) {
     }
     mutex.lock();
     if (taskQueue.size() >= queueSize) {
-        auto _arg = ObjPool::allocate<ThreadPool*>(this);
-        auto e = ObjPool::allocate<Event>(EventIncreasePool, _arg);
+        auto e = ObjPool::allocate<Event>(EventIncreasePool, shared_from_this());
         receiveEvent(e);
     }
     taskQueue.emplace_back(task, arg);
@@ -36,7 +35,7 @@ void ThreadPool::addPriorityTask(void (*task)(shared_ptr<void> arg), shared_ptr<
 }
 
 void ThreadPool::cycleInit() {
-    t = ObjPool::allocate<Time>(0, 0, 1, 0, this);
+    t = ObjPool::allocate<Time>(0, 0, 1, 0, shared_from_this());
     TimeSystem::receiveEvent(EventTicker, t);
     for(auto& thread : threadPool){
         auto arg = new ThreadPoolEventArg(this, &thread);
@@ -45,7 +44,6 @@ void ThreadPool::cycleInit() {
 }
 
 void ThreadPool::cycleClear() {
-    t->ePtr = nullptr;
     TimeSystem::deleteTicker(t);
     join();
 }
@@ -107,7 +105,7 @@ void *ThreadPool::taskRoutine(void *arg) {
 }
 
 void ThreadPool::handleTimeOut(shared_ptr<void> arg) {
-    ((ThreadPool*)(static_pointer_cast<Time>(arg))->ePtr)->decreasePoolSize();
+    static_pointer_cast<ThreadPool>(static_pointer_cast<Time>(arg)->ePtr.lock())->decreasePoolSize();
 }
 
 void ThreadPool::increasePoolSize() {
@@ -147,5 +145,5 @@ void ThreadPool::decreasePoolSize() {
 }
 
 void ThreadPool::handleIncreasePool(shared_ptr<void> arg) {
-    (*static_pointer_cast<ThreadPool*>(arg))->increasePoolSize();
+    (static_pointer_cast<ThreadPool>(arg))->increasePoolSize();
 }
