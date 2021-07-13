@@ -31,6 +31,7 @@ Thread &TaskSystem::getThread() {
 
 void *TaskSystem::handle(void *) {
     getThreadPool()->cycle();
+    return nullptr;
 }
 
 void TaskSystem::addPriorityTask(void (*task)(shared_ptr<void>), shared_ptr<void> arg) {

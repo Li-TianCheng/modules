@@ -41,4 +41,5 @@ void *Log::task(void *arg) {
             log->file << s << std::endl;
         }
     }
+    return nullptr;
 }

@@ -38,5 +38,6 @@ void TimeSystem::deleteTicker(shared_ptr<Time> arg) {
 
 void *TimeSystem::handle(void *) {
     getTimeWheel()->timeWheelCycle();
+    return nullptr;
 }
 

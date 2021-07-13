@@ -16,9 +16,6 @@ HttpSession::HttpSession() : isFirstPing(true), request(nullptr), status(0), tim
 }
 
 void HttpSession::match(shared_ptr<Http> request) {
-    if (request->line["url"] == "/close") {
-        closeListen();
-    }
     auto response = ObjPool::allocate<Http>();
     response->line["version"] = request->line["version"];
     response->line["status"] = "404";
