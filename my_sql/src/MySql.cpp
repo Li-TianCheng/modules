@@ -8,40 +8,21 @@ MySql::MySql(const string &userName, const string &password, const string &dataB
              int port) : userName(userName), password(password), checkTime(nullptr),
              dataBase(dataBase), host(host), port(port), free(nullptr), connNum(0) {
     mysql_library_init;
-    init();
-}
-
-void MySql::init() {
-    registerEvent(EventEndCycle, nullptr);
-    registerEvent(EventTickerTimeOut, handleTimeOut);
-    registerEvent(EventIncreasePool, handleIncreasePool);
-}
-
-void MySql::cycleClear() {
-    TimeSystem::deleteTicker(checkTime);
-}
-
-void MySql::handleTimeOut(shared_ptr<void> arg) {
-    static_pointer_cast<MySql>(static_pointer_cast<Time>(arg)->ePtr.lock())->decreasePool();
 }
 
 void MySql::close() {
-    auto e = ObjPool::allocate<Event>(EventEndCycle, nullptr);
-    receiveEvent(e);
+    ResourceSystem::unregisterResource(shared_from_this());
 }
 
 void MySql::connect() {
-    increasePool();
-    TaskSystem::addTask(cycleTask, shared_from_this());
-    checkTime = ObjPool::allocate<Time>(0, 0, 1, 0, shared_from_this());
-    TimeSystem::receiveEvent(EventTicker, checkTime);
+    increase();
+    ResourceSystem::registerResource(shared_from_this(), 0, 0, 1, 0);
 }
 
 shared_ptr<Connection> MySql::getConnection() {
     mutex.lock();
     while (free == nullptr) {
-        auto e = ObjPool::allocate<Event>(EventIncreasePool, shared_from_this());
-        receiveEvent(e);
+        ResourceSystem::receiveEvent(EventIncrease, shared_from_this());
         condition.wait(mutex);
     }
     shared_ptr<Connection> conn = free;
@@ -50,11 +31,7 @@ shared_ptr<Connection> MySql::getConnection() {
     return conn;
 }
 
-void MySql::handleIncreasePool(shared_ptr<void> arg) {
-    (static_pointer_cast<MySql>(arg))->increasePool();
-}
-
-void MySql::decreasePool() {
+void MySql::checkOut() {
     if (free == nullptr || connNum == InitConnNum) {
         return;
     }
@@ -73,7 +50,7 @@ void MySql::decreasePool() {
     condition.notify(mutex);
 }
 
-void MySql::increasePool() {
+void MySql::increase() {
     if (free != nullptr || connNum >= MaxConnNum) {
         return;
     }

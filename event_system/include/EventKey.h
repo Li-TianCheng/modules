@@ -13,7 +13,10 @@ enum EventKey{
     EventAddSession,
     EventTimerTimeOut,
     EventTickerTimeOut,
-    EventIncreasePool,
+    EventIncrease,
+    EventDecrease,
+    EventRegisterResource,
+    EventUnregisterResource,
     EventCloseConnection,
     EventCloseListen
 };

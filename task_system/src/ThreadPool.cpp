@@ -7,7 +7,10 @@
 ThreadPool::ThreadPool(int initNum, int maxNum, int queueSize): initNum(initNum), maxNum(maxNum),
                                                     queueSize(queueSize), threadNum(initNum),
                                                     runningNum(0), shutdown(0), threadPool(initNum) {
-    init();
+    for(auto& thread : threadPool){
+        auto arg = new ThreadPoolEventArg(this, &thread);
+        thread.run(taskRoutine, arg);
+    }
 }
 
 void ThreadPool::addTask(void (*task)(shared_ptr<void>), shared_ptr<void> arg) {
@@ -17,8 +20,7 @@ void ThreadPool::addTask(void (*task)(shared_ptr<void>), shared_ptr<void> arg) {
     }
     mutex.lock();
     if (taskQueue.size() >= queueSize) {
-        auto e = ObjPool::allocate<Event>(EventIncreasePool, shared_from_this());
-        receiveEvent(e);
+        ResourceSystem::receiveEvent(EventIncrease, shared_from_this());
     }
     taskQueue.emplace_back(task, arg);
     condition.notify(mutex);
@@ -34,28 +36,8 @@ void ThreadPool::addPriorityTask(void (*task)(shared_ptr<void> arg), shared_ptr<
     condition.notify(mutex);
 }
 
-void ThreadPool::cycleInit() {
-    t = ObjPool::allocate<Time>(0, 0, 1, 0, shared_from_this());
-    TimeSystem::receiveEvent(EventTicker, t);
-    for(auto& thread : threadPool){
-        auto arg = new ThreadPoolEventArg(this, &thread);
-        thread.run(taskRoutine, arg);
-    }
-}
-
-void ThreadPool::cycleClear() {
-    TimeSystem::deleteTicker(t);
-    join();
-}
-
 ThreadPool::~ThreadPool() {
     while(threadNum != 0){}
-}
-
-void ThreadPool::init() {
-    registerEvent(EventTickerTimeOut, handleTimeOut);
-    registerEvent(EventIncreasePool, handleIncreasePool);
-    registerEvent(EventEndCycle, nullptr);
 }
 
 void ThreadPool::close() {
@@ -104,11 +86,7 @@ void *ThreadPool::taskRoutine(void *arg) {
     pthread_cleanup_pop(0);
 }
 
-void ThreadPool::handleTimeOut(shared_ptr<void> arg) {
-    static_pointer_cast<ThreadPool>(static_pointer_cast<Time>(arg)->ePtr.lock())->decreasePoolSize();
-}
-
-void ThreadPool::increasePoolSize() {
+void ThreadPool::increase() {
     if (runningNum != threadNum || threadNum >= maxNum){
         return;
     }
@@ -122,7 +100,7 @@ void ThreadPool::increasePoolSize() {
     mutex.unlock();
 }
 
-void ThreadPool::decreasePoolSize() {
+void ThreadPool::checkOut() {
     if (!taskQueue.empty() || threadNum == initNum ){
         return;
     }
@@ -142,8 +120,4 @@ void ThreadPool::decreasePoolSize() {
         }
     }
     mutex.unlock();
-}
-
-void ThreadPool::handleIncreasePool(shared_ptr<void> arg) {
-    (static_pointer_cast<ThreadPool>(arg))->increasePoolSize();
 }

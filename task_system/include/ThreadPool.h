@@ -9,7 +9,7 @@
 #include <atomic>
 #include <list>
 #include <deque>
-#include "event_system/include/EventSystem.h"
+#include "resource/include/ResourceSystem.h"
 #include "my_pthread/include/Condition.h"
 #include "my_pthread/include/Thread.h"
 #include "time_system/include/TimeSystem.h"
@@ -23,28 +23,23 @@ public:
     bool isBlocking;
 };
 
-class ThreadPool: public EventSystem {
+class ThreadPool: public Resource {
 public:
     ThreadPool(int initNum, int maxNum, int queueSize);
     void addTask(void (*task)(shared_ptr<void>), shared_ptr<void> arg);
     void addPriorityTask(void (*task)(shared_ptr<void> arg), shared_ptr<void> arg);
-    void cycleInit() override;
-    void cycleClear() override;
+    void close();
+    void join();
     ThreadPool(const ThreadPool&) = delete;
     ThreadPool(ThreadPool&&) = delete;
     ThreadPool& operator=(const ThreadPool&) = delete;
     ThreadPool& operator=(ThreadPool&&) = delete;
-    ~ThreadPool() override;
+    ~ThreadPool();
 private:
-    void increasePoolSize();
-    void decreasePoolSize();
-    void init();
-    void close();
-    void join();
+    void increase() override;
+    void checkOut() override;
     static void cleanHandler(void* arg);
     static void* taskRoutine(void* arg);
-    static void handleTimeOut(shared_ptr<void> arg);
-    static void handleIncreasePool(shared_ptr<void> arg);
 private:
     struct TaskNode{
         void (*task)(shared_ptr<void>);

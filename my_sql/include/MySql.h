@@ -10,7 +10,7 @@
 #include <unordered_map>
 #include <queue>
 #include <mysql/mysql.h>
-#include "event_system/include/EventSystem.h"
+#include "resource/include/ResourceSystem.h"
 #include "time_system/include/TimeSystem.h"
 #include "task_system/include/TaskSystem.h"
 
@@ -27,23 +27,19 @@ struct Connection {
     shared_ptr<Connection> next = nullptr;
 };
 
-class MySql : public EventSystem{
+class MySql : public Resource{
 public:
     MySql(const string &userName, const string &password, const string &dataBase, const string& host="localhost", int port=3306);
     void connect();
     void close();
     bool executeSQL(const string& sql);
     vector<vector<unordered_map<string, string>>> queryData(const string& sql);
-    ~MySql() override;
+    ~MySql();
 private:
     shared_ptr<Connection> getConnection();
     void freeConnection(shared_ptr<Connection> conn);
-    void increasePool();
-    void decreasePool();
-    void init();
-    void cycleClear() override;
-    static void handleTimeOut(shared_ptr<void> arg);
-    static void handleIncreasePool(shared_ptr<void> arg);
+    void increase() override;
+    void checkOut() override;
 private:
     const string userName;
     const string password;

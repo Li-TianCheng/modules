@@ -6,51 +6,31 @@
 
 ProgressBar::ProgressBar(const string &title, int num) :curr(0,0,0,0,nullptr), updateTime(nullptr),
     title(title), num(num), count(0) {
-    init();
 }
 
 void ProgressBar::start() {
-    updateTime = ObjPool::allocate<Time>(0,0,0,500,shared_from_this());
-    TaskSystem::addTask(cycleTask, shared_from_this());
+    ResourceSystem::registerResource(shared_from_this(), 0, 0, 0, 500);
+    for (int i = 0; i < 60-title.size(); i++){
+        cout << " ";
+    }
+    cout << title << endl;
+    checkOut();
 }
 
 void ProgressBar::done() {
     if (count >= num) {
-        draw();
+        checkOut();
     } else {
         count++;
     }
 }
 
-void ProgressBar::init() {
-    registerEvent(EventEndCycle, nullptr);
-    registerEvent(EventTickerTimeOut, handleTimeOut);
-}
-
-void ProgressBar::handleTimeOut(shared_ptr<void> arg) {
-    static_pointer_cast<ProgressBar>(static_pointer_cast<Time>(arg)->ePtr.lock())->draw();
-}
-
 void ProgressBar::stop() {
     cout << endl;
-    auto e = ObjPool::allocate<Event>(EventEndCycle, nullptr);
-    receiveEvent(e);
+    ResourceSystem::unregisterResource(shared_from_this());
 }
 
-void ProgressBar::cycleInit() {
-    TimeSystem::receiveEvent(EventTicker, updateTime);
-    for (int i = 0; i < 60-title.size(); i++){
-        cout << " ";
-    }
-    cout << title << endl;
-    draw();
-}
-
-void ProgressBar::cycleClear() {
-    TimeSystem::deleteTicker(updateTime);
-}
-
-void ProgressBar::draw() {
+void ProgressBar::checkOut() {
     curr += *updateTime;
     cout << "\r";
     cout << "[" << count << "/" << num;

@@ -6,6 +6,7 @@
 #define TASKSYSTEM_TASKSYSTEM_H
 
 #include "ThreadPool.h"
+#include "resource/include/ResourceSystem.h"
 
 static const int InitThreadNum       = 10;
 static const int MaxThreadNum        = 30;
@@ -24,8 +25,6 @@ public:
 private:
     TaskSystem() = default;
     static shared_ptr<ThreadPool> getThreadPool();
-    static Thread& getThread();
-    static void* handle(void*);
 };
 
 

@@ -8,25 +8,19 @@
 #include <atomic>
 #include <iostream>
 #include <iomanip>
-#include "event_system/include/EventSystem.h"
-#include "task_system/include/TaskSystem.h"
-#include "time_system/include/TimeSystem.h"
+#include "resource/include/ResourceSystem.h"
 
 using namespace std;
 
 
-class ProgressBar : public EventSystem{
+class ProgressBar : public Resource{
 public:
     ProgressBar(const string& title, int num);
     void start();
     void done();
     void stop();
-    void cycleInit() override;
-    void cycleClear() override;
 private:
-    void init();
-    static void handleTimeOut(shared_ptr<void> arg);
-    void draw();
+    void checkOut() override;
 private:
     shared_ptr<Time> updateTime;
     Time curr;

@@ -7,6 +7,7 @@
 
 #include "mem_pool/include/ObjPool.hpp"
 #include "time_system/include/TimeSystem.h"
+#include "resource/include/ResourceSystem.h"
 #include "task_system/include/TaskSystem.h"
 
 namespace modules {
@@ -17,11 +18,13 @@ namespace modules {
 inline void modules::init(){
     ObjPool::init();
     TimeSystem::init();
+    ResourceSystem::init();
     TaskSystem::init();
 }
 
 inline void modules::close(){
     TaskSystem::close();
+    ResourceSystem::close();
     TimeSystem::close();
     ObjPool::close();
 }
