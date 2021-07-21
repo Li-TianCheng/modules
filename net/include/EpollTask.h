@@ -10,10 +10,12 @@
 #include <unordered_map>
 #include <vector>
 #include <unistd.h>
+#include <sstream>
 #include "EpollEventType.h"
 #include "time_system/include/TimeSystem.h"
 #include "event_system/include/EventSystem.h"
 #include "task_system/include/TaskSystem.h"
+#include "log/include/LogSystem.h"
 #include "TcpSession.h"
 
 
@@ -67,6 +69,9 @@ EpollTask<T>::EpollTask(std::weak_ptr<TcpServer<T>> server) : running(false), se
         throw std::runtime_error("epoll 申请错误");
     }
     init();
+    std::ostringstream log;
+    log << "EpollTask[" << this << "] begin";
+    LOG(Info, log.str());
 }
 
 template<typename T> inline
@@ -110,6 +115,9 @@ void EpollTask<T>::addNewSession(shared_ptr<TcpSession> session) {
     session->sessionInit();
     sessionManager[fd] = session;
     epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &session->epollEvent);
+    std::ostringstream log;
+    log << "EpollTask[" << this << "] addNewSession[" << session << "]";
+    LOG(Info, log.str());
 }
 
 template<typename T> inline
@@ -120,6 +128,9 @@ void EpollTask<T>::delSession(int fd) {
         session->sessionClear();
         sessionManager.erase(fd);
         sessionNum--;
+        std::ostringstream log;
+        log << "EpollTask[" << this << "] deleteSession[" << session << "]";
+        LOG(Info, log.str());
     }
     ::close(fd);
 }
@@ -198,21 +209,33 @@ bool EpollTask<T>::isRunning() {
 template<typename T> inline
 void EpollTask<T>::readTask(shared_ptr<void> arg) {
     auto session = static_pointer_cast<TcpSession>(arg);
+    std::ostringstream log;
+    log << "session[" << session << "] readTask start";
+    LOG(Info, log.str());
     int res = session->readBuffer.readFromFd(session->epollEvent.data.fd);
     if (res == -1) {
         session->epollEvent.events = Read|Err|Hup|RdHup|Et|OneShot;
         session->isRead = false;
         epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
+        std::ostringstream log;
+        log << "session[" << session << "] readTask failed";
+        LOG(Warn, log.str());
         return;
     }
     session->handleReadDone(session->readBuffer.getReadPos(), session->readBuffer.getMsgNum());
     session->isRead = false;
     epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
+    std::ostringstream _log;
+    _log << "session[" << session << "] readTask done";
+    LOG(Info, _log.str());
 }
 
 template<typename T> inline
 void EpollTask<T>::writeTask(shared_ptr<void> arg) {
     auto session = static_pointer_cast<TcpSession>(arg);
+    std::ostringstream log;
+    log << "session[" << session << "] writeTask start";
+    LOG(Info, log.str());
     deque<Msg> temp;
     session->mutex.lock();
     while (!session->msgQueue.empty()) {
@@ -245,11 +268,17 @@ void EpollTask<T>::writeTask(shared_ptr<void> arg) {
                     session->mutex.unlock();
                     session->isWrite = false;
                     epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
+                    std::ostringstream log;
+                    log << "session[" << session << "] writeTask eagain";
+                    LOG(Info, log.str());
                     return;
                 } else {
                     session->epollEvent.events = Read|Err|Hup|RdHup|Et|OneShot;
                     session->isWrite = false;
                     epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
+                    std::ostringstream log;
+                    log << "session[" << session << "] writeTask failed";
+                    LOG(Warn, log.str());
                     return;
                 }
             }
@@ -267,6 +296,9 @@ void EpollTask<T>::writeTask(shared_ptr<void> arg) {
     }
     session->isWrite = false;
     epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
+    std::ostringstream _log;
+    _log << "session[" << session << "] writeTask done";
+    LOG(Info, _log.str());
 }
 
 template<typename T> inline
@@ -308,6 +340,9 @@ void EpollTask<T>::cycleTask(shared_ptr<void> arg) {
     auto e = ObjPool::allocate<Event>(EventEndCycle, nullptr);
     epoll->receiveEvent(e);
     epoll->running = false;
+    std::ostringstream log;
+    log << "EpollTask[" << epoll << "] close";
+    LOG(Info, log.str());
 }
 
 template<typename T> inline

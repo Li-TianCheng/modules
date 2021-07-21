@@ -13,6 +13,7 @@
 #include "my_pthread/include/Condition.h"
 #include "my_pthread/include/Thread.h"
 #include "time_system/include/TimeSystem.h"
+#include "log/include/LogSystem.h"
 
 using std::list;
 using std::deque;

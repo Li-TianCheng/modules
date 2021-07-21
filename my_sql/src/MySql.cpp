@@ -5,18 +5,20 @@
 #include "MySql.h"
 
 MySql::MySql(const string &userName, const string &password, const string &dataBase, const string &host,
-             int port) : userName(userName), password(password), checkTime(nullptr),
+             int port) : userName(userName), password(password),
              dataBase(dataBase), host(host), port(port), free(nullptr), connNum(0) {
     mysql_library_init;
 }
 
 void MySql::close() {
     ResourceSystem::unregisterResource(shared_from_this());
+    LOG(Info, "MySql close");
 }
 
 void MySql::connect() {
     increase();
     ResourceSystem::registerResource(shared_from_this(), 0, 0, 1, 0);
+    LOG(Info, "MySql begin, userName:"+userName);
 }
 
 shared_ptr<Connection> MySql::getConnection() {
@@ -48,6 +50,7 @@ void MySql::checkOut() {
         connNum--;
     }
     condition.notify(mutex);
+    LOG(Info, "MySql decrease, current num:"+std::to_string(connNum));
 }
 
 void MySql::increase() {
@@ -68,6 +71,7 @@ void MySql::increase() {
         connNum++;
     }
     condition.notify(mutex);
+    LOG(Info, "MySql increase, current num:"+std::to_string(connNum));
 }
 
 void MySql::freeConnection(shared_ptr<Connection> conn) {
@@ -82,6 +86,7 @@ bool MySql::executeSQL(const string &sql) {
     if (mysql_real_query(&conn->conn, sql.data(), sql.size()) != 0) {
         std::cerr << mysql_error(&conn->conn) << std::endl;
         freeConnection(conn);
+        LOG(Info, "executeSQL failed["+sql+"]");
         return false;
     }
     while (true) {
@@ -92,6 +97,7 @@ bool MySql::executeSQL(const string &sql) {
         }
     }
     freeConnection(conn);
+    LOG(Info, "executeSQL success["+sql+"]");
     return true;
 }
 
@@ -115,6 +121,7 @@ vector<vector<unordered_map<string, string>>> MySql::queryData(const string &sql
     if (mysql_real_query(&conn->conn, sql.data(), sql.size()) != 0) {
         std::cerr << mysql_error(&conn->conn) << std::endl;
         freeConnection(conn);
+        LOG(Info, "queryData failed["+sql+"]");
         return vector<vector<unordered_map<string, string>>>();
     }
     vector<vector<unordered_map<string, string>>> result;
@@ -144,5 +151,6 @@ vector<vector<unordered_map<string, string>>> MySql::queryData(const string &sql
         }
     }
     freeConnection(conn);
+    LOG(Info, "queryData success["+sql+"]");
     return result;
 }

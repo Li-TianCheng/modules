@@ -4,42 +4,28 @@
 
 #include "log/include/Log.h"
 
-Log::Log(const string &path) : isClose(false) {
+Log::Log(const string &path) {
     file.open(path, std::ios::out | std::ios::trunc);
-    thread.run(task, this);
-}
-
-void Log::close() {
-    isClose = true;
-    thread.join();
-    file.close();
 }
 
 void Log::log(string &&log) {
-    if (isClose) {
-        return;
-    }
     mutex.lock();
     logQueue.push(std::forward<string>(log));
-    condition.notify(mutex);
+    mutex.unlock();
 }
 
-void *Log::task(void *arg) {
-    Log* log = (Log*)arg;
-    while(!log->isClose || !log->logQueue.empty()) {
-        log->mutex.lock();
-        while(log->logQueue.empty()) {
-            log->condition.wait(log->mutex);
-        }
-        vector<string> temp;
-        while (!log->logQueue.empty()) {
-            temp.push_back(move(log->logQueue.front()));
-            log->logQueue.pop();
-        }
-        log->condition.notify(log->mutex);
-        for (auto& s : temp) {
-            log->file << s << std::endl;
-        }
+void Log::checkOut() {
+    if (logQueue.empty()) {
+        return;
     }
-    return nullptr;
+    vector<string> tmp;
+    mutex.lock();
+    while (!logQueue.empty()) {
+        tmp.push_back(move(logQueue.front()));
+        logQueue.pop();
+    }
+    mutex.unlock();
+    for (auto& s : tmp) {
+        file << s << std::endl;
+    }
 }

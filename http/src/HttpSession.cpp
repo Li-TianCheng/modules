@@ -16,6 +16,7 @@ HttpSession::HttpSession() : isFirstPing(true), request(nullptr), status(0), tim
 }
 
 void HttpSession::match(shared_ptr<Http> request) {
+    LOG(Info, "HttpSession request:"+request->line["method"]+" "+request->line["url"]+" "+request->line["version"]);
     auto response = ObjPool::allocate<Http>();
     response->line["version"] = request->line["version"];
     response->line["status"] = "404";

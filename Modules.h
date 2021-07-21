@@ -9,21 +9,24 @@
 #include "time_system/include/TimeSystem.h"
 #include "resource/include/ResourceSystem.h"
 #include "task_system/include/TaskSystem.h"
+#include "log/include/LogSystem.h"
 
 namespace modules {
-    static void init();
+    static void init(const string& path="../log/log.log");
     static void close();
 }
 
-inline void modules::init(){
+inline void modules::init(const string& path){
     ObjPool::init();
     TimeSystem::init();
     ResourceSystem::init();
+    LogSystem::init(path);
     TaskSystem::init();
 }
 
 inline void modules::close(){
     TaskSystem::close();
+    LogSystem::close();
     ResourceSystem::close();
     TimeSystem::close();
     ObjPool::close();

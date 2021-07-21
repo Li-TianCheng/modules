@@ -9,11 +9,11 @@
 #include <iostream>
 #include <fstream>
 #include <queue>
+#include <cstring>
 #include <sys/time.h>
 #include <vector>
 #include <atomic>
-#include "my_pthread/include/Condition.h"
-#include "my_pthread/include/Thread.h"
+#include "resource/include/ResourceSystem.h"
 
 using std::string;
 using std::queue;
@@ -47,23 +47,17 @@ static string getTime() {
     return currentTime;
 }
 
-#define __FILE_NAME__ (strrchr(__FILE__, '/') ? (strrchr(__FILE__, '/') + 1):__FILE__)
-#define LOG(logger, rank, msg) logger.log(logString[rank]+" "+getTime()+" "+__FILE_NAME__+":"+to_string(__LINE__)+" "+std::move(msg))
-
-class Log {
+class Log : public Resource {
 public:
     explicit Log(const string& path);
-    void close();
     void log(string&& log);
 private:
-    static void* task(void* arg);
+    void checkOut() override;
+    friend class LogSystem;
 private:
     std::ofstream file;
-    std::atomic<bool> isClose;
     Mutex mutex;
-    Condition condition;
     queue<string> logQueue;
-    Thread thread;
 };
 
 

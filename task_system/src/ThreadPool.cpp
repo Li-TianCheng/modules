@@ -11,6 +11,7 @@ ThreadPool::ThreadPool(int initNum, int maxNum, int queueSize): initNum(initNum)
         auto arg = new ThreadPoolEventArg(this, &thread);
         thread.run(taskRoutine, arg);
     }
+    LOG(Info, "ThreadPool begin");
 }
 
 void ThreadPool::addTask(void (*task)(shared_ptr<void>), shared_ptr<void> arg) {
@@ -47,6 +48,7 @@ void ThreadPool::close() {
         (*it).detach();
         threadPool.erase(it++);
     }
+    LOG(Info, "ThreadPool close");
 }
 
 void ThreadPool::join() {
@@ -56,6 +58,7 @@ void ThreadPool::join() {
         (*it).join();
         threadPool.erase(it++);
     }
+    LOG(Info, "ThreadPool join");
 }
 
 void ThreadPool::cleanHandler(void *arg) {
@@ -98,6 +101,7 @@ void ThreadPool::increase() {
         threadNum++;
     }
     mutex.unlock();
+    LOG(Info, "ThreadPool increase, current num:"+std::to_string(threadNum));
 }
 
 void ThreadPool::checkOut() {
@@ -120,4 +124,5 @@ void ThreadPool::checkOut() {
         }
     }
     mutex.unlock();
+    LOG(Info, "ThreadPool decrease, current num:"+std::to_string(threadNum));
 }

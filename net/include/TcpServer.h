@@ -32,7 +32,7 @@ public:
     ~TcpServer() override;
 private:
     void addNewSession(shared_ptr<TcpSession> session);
-    void cycleInit();
+    void cycleInit() override;
     static void serverCycle(shared_ptr<void> arg);
 private:
     int serverFd;
@@ -80,6 +80,9 @@ void TcpServer<T>::addNewSession(shared_ptr<TcpSession> session) {
         waitCLose->close();
         epollList.remove(waitCLose);
         waitCLose = nullptr;
+        std::ostringstream log;
+        log << "EpollList decrease, current num:" << epollList.size();
+        LOG(Info, log.str());
     }
     int min = INT32_MAX;
     shared_ptr<EpollTask<T>> minIter = nullptr;
@@ -129,6 +132,9 @@ void TcpServer<T>::addNewSession(shared_ptr<TcpSession> session) {
         if (min+1 >= IncreaseSessionNum && epollList.size() < MaxEpollNum) {
             auto e = ObjPool::allocate<EpollTask<T>>(static_pointer_cast<TcpServer<T>>(shared_from_this()));
             epollList.push_back(e);
+            std::ostringstream log;
+            log << "EpollList increase, current num:" << epollList.size();
+            LOG(Info, log.str());
             e->run();
         } else if (epollList.size() > 1 && sum / epollList.size() < DecreaseAvgNum) {
             waitCLose = minIter;
@@ -152,6 +158,7 @@ void TcpServer<T>::close() {
         for (auto& e : epollList) {
             e->close();
         }
+        LOG(Info, "listen end");
     }
 }
 
@@ -187,6 +194,7 @@ void TcpServer<T>::cycleInit() {
     auto e = ObjPool::allocate<EpollTask<T>>(static_pointer_cast<TcpServer<T>>(shared_from_this()));
     epollList.push_back(e);
     e->run();
+    LOG(Info, "listen begin");
 }
 
 template<typename T>

@@ -13,6 +13,7 @@
 #include "resource/include/ResourceSystem.h"
 #include "time_system/include/TimeSystem.h"
 #include "task_system/include/TaskSystem.h"
+#include "log/include/LogSystem.h"
 
 using std::string;
 using std::queue;
@@ -47,7 +48,6 @@ private:
     const string host;
     const int port;
     shared_ptr<Connection> free;
-    shared_ptr<Time> checkTime;
     Mutex mutex;
     std::atomic<int> connNum;
     Condition condition;
