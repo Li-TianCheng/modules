@@ -22,7 +22,6 @@ public:
 private:
     void checkOut() override;
 private:
-    shared_ptr<Time> updateTime;
     Time curr;
     string title;
     atomic<int> count;

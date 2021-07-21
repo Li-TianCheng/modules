@@ -4,17 +4,17 @@
 
 #include "ProgressBar.h"
 
-ProgressBar::ProgressBar(const string &title, int num) :curr(0,0,0,0,nullptr), updateTime(nullptr),
+ProgressBar::ProgressBar(const string &title, int num) :curr(0,0,0,0,nullptr),
     title(title), num(num), count(0) {
 }
 
 void ProgressBar::start() {
-    ResourceSystem::registerResource(shared_from_this(), 0, 0, 0, 500);
     for (int i = 0; i < 60-title.size(); i++){
         cout << " ";
     }
     cout << title << endl;
     checkOut();
+    ResourceSystem::registerResource(shared_from_this(), 0, 0, 0, 500);
 }
 
 void ProgressBar::done() {
@@ -31,7 +31,7 @@ void ProgressBar::stop() {
 }
 
 void ProgressBar::checkOut() {
-    curr += *updateTime;
+    curr += Time(0, 0, 0, 500, nullptr);
     cout << "\r";
     cout << "[" << count << "/" << num;
     cout << "|" << fixed << setprecision(2) << double(count)/num*100 << "%]";
