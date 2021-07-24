@@ -11,6 +11,7 @@
 #include <csignal>
 #include <cstring>
 #include <unistd.h>
+#include <malloc.h>
 #include "EpollEventType.h"
 #include "AddressType.h"
 #include "TcpServerBase.h"
@@ -37,10 +38,9 @@ private:
     void cycleInit() override;
     void addNewSession(shared_ptr<TcpSession> session);
 private:
-    bool shutdown;
     int epollFd;
     int waitTime;
-    unordered_map<int, shared_ptr<TcpServerBase>> map;
+    unordered_map<int, shared_ptr<TcpServerBase>> listenMap;
     list<shared_ptr<EpollTask>> epollList;
     shared_ptr<EpollTask> waitCLose;
 };

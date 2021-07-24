@@ -4,7 +4,7 @@
 
 #include "net/include/Listener.h"
 
-Listener::Listener() : shutdown(false), waitTime(-1), waitCLose(nullptr)  {
+Listener::Listener() : waitTime(-1), waitCLose(nullptr)  {
     signal(SIGPIPE, SIG_IGN);
     epollFd = epoll_create(1);
     if (epollFd == -1) {
@@ -38,15 +38,15 @@ void Listener::registerListener(int port, AddressType addressType, shared_ptr<Tc
     server->epollEvent.data.fd = serverFd;
     server->epollEvent.events = Read | Err;
     epoll_ctl(epollFd, EPOLL_CTL_ADD, serverFd, &server->epollEvent);
-    map[serverFd] = server;
+    listenMap[serverFd] = server;
 }
 
 void Listener::listen() {
     cycleInit();
-    while (!shutdown || !epollList.empty()) {
+    while (!listenMap.empty()) {
         cycleNoBlock(-1);
-        epoll_event events[map.size()];
-        int num = epoll_wait(epollFd, events, map.size(), waitTime);
+        epoll_event events[listenMap.size()];
+        int num = epoll_wait(epollFd, events, listenMap.size(), waitTime);
         if (num <= 0) {
             waitTime = CheckTime;
             addNewSession(nullptr);
@@ -54,15 +54,12 @@ void Listener::listen() {
             waitTime = 0;
             for (int i = 0; i < num; i++) {
                 if ((events[i].events & Err) == Err) {
-                    map[events[i].data.fd]->close();
-                    epoll_ctl(epollFd, EPOLL_CTL_DEL, events[i].data.fd, &map[events[i].data.fd]->epollEvent);
-                    map.erase(events[i].data.fd);
-                    if (map.empty()) {
-                        shutdown = true;
-                    }
+                    ::close(events[i].data.fd);
+                    epoll_ctl(epollFd, EPOLL_CTL_DEL, events[i].data.fd, &listenMap[events[i].data.fd]->epollEvent);
+                    listenMap.erase(events[i].data.fd);
                 }
                 if ((events[i].events & Read) == Read) {
-                    auto session = map[events[i].data.fd]->getSession();
+                    auto session = listenMap[events[i].data.fd]->getSession();
                     int clientFd = accept(events[i].data.fd, &session->address, &session->len);
                     if (clientFd > 0) {
                         session->epollEvent.data.fd = clientFd;
@@ -72,15 +69,10 @@ void Listener::listen() {
             }
         }
     }
-}
-
-Listener::~Listener() {
-    for (auto& it : map) {
-        it.second->close();
-        epoll_ctl(epollFd, EPOLL_CTL_DEL, it.first, &it.second->epollEvent);
+    for (auto& e : epollList) {
+        e->needClose = true;
     }
-    ::close(epollFd);
-    while (true){
+    while (true) {
         bool flag = true;
         for (auto& e : epollList) {
             if (e->isRunning()) {
@@ -94,8 +86,16 @@ Listener::~Listener() {
     }
 }
 
+Listener::~Listener() {
+    for (auto& it : listenMap) {
+        ::close(it.first);
+        epoll_ctl(epollFd, EPOLL_CTL_DEL, it.first, &it.second->epollEvent);
+    }
+    ::close(epollFd);
+}
+
 void Listener::cycleInit() {
-    for (auto& it : map) {
+    for (auto& it : listenMap) {
         int err = ::listen(it.first, MaxWaitNum);
         if (err == -1){
             ::close(it.first);
@@ -103,19 +103,24 @@ void Listener::cycleInit() {
         }
         LOG(Info, "port:"+std::to_string(it.second->port)+" listen begin");
     }
+    auto e = ObjPool::allocate<EpollTask>();
+    epollList.push_back(e);
+    e->run();
 }
 
 void Listener::handleCloseListen(shared_ptr<void> arg) {
     auto server = static_pointer_cast<TcpServerBase>(arg);
     auto listener = static_pointer_cast<Listener>(server->listener);
-    listener->map.erase(server->serverFd);
-    if (listener->map.empty()) {
-        listener->shutdown = true;
-    }
+    epoll_ctl(listener->epollFd, EPOLL_CTL_DEL, server->serverFd, &server->epollEvent);
+    ::shutdown(server->serverFd, SHUT_RD);
+    ::close(server->serverFd);
+    listener->listenMap.erase(server->serverFd);
+    LOG(Info, "port:"+std::to_string(server->port)+" listen end");
 }
 
 void Listener::addNewSession(shared_ptr<TcpSession> session) {
     if (session == nullptr && waitCLose != nullptr && waitCLose->sessionNum+waitCLose->timeToFd.size() == 0) {
+        malloc_trim(0);
         waitCLose->needClose = true;
         epollList.remove(waitCLose);
         waitCLose = nullptr;
@@ -162,22 +167,21 @@ void Listener::addNewSession(shared_ptr<TcpSession> session) {
             waitCLose = nullptr;
         }
     } else {
-        if ((min == INT32_MAX || min+1 >= IncreaseSessionNum) && epollList.size() < MaxEpollNum && session != nullptr) {
+        if (session != nullptr) {
+            session->epoll = minIter;
+            auto e = ObjPool::allocate<Event>(EventAddSession, session);
+            minIter->receiveEvent(e);
+            minIter->sessionNum++;
+        }
+        if (min+1 >= IncreaseSessionNum && epollList.size() < MaxEpollNum) {
             auto e = ObjPool::allocate<EpollTask>();
             epollList.push_back(e);
             std::ostringstream log;
             log << "EpollList increase, current num:" << epollList.size();
             LOG(Info, log.str());
             e->run();
-            minIter = e;
-        } else if (!epollList.empty() && sum / epollList.size() < DecreaseAvgNum) {
+        } else if (epollList.size() > 1 && sum / epollList.size() < DecreaseAvgNum) {
             waitCLose = minIter;
-        }
-        if (session != nullptr) {
-            session->epoll = minIter;
-            auto e = ObjPool::allocate<Event>(EventAddSession, session);
-            minIter->receiveEvent(e);
-            minIter->sessionNum++;
         }
     }
 }
