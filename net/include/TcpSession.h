@@ -10,6 +10,7 @@
 #include <string>
 #include "EpollEventType.h"
 #include "Buffer.h"
+#include "TcpServerBase.h"
 #include "time_system/include/Time.h"
 #include "time_system/include/TimeSystem.h"
 
@@ -44,11 +45,12 @@ public:
     virtual void handleReadDone(iter pos, size_t n);
     virtual ~TcpSession() = default;
 private:
-    template<typename T>
     friend class EpollTask;
     template<typename T>
     friend class TcpServer;
+    friend class Listener;
 protected:
+    std::shared_ptr<TcpServerBase> server;
     std::atomic<bool> isCloseConnection;
     std::atomic<bool> isWrite;
     std::atomic<bool> isRead;

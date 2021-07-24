@@ -5,11 +5,13 @@
 #include "http/include/HttpServer.h"
 
 HttpServer::HttpServer(int port, AddressType addressType) {
-    server = ObjPool::allocate<TcpServer<HttpSession>>(port, addressType);
+    listener = ObjPool::allocate<Listener>();
+    server = ObjPool::allocate<TcpServer<HttpSession>>();
+    listener->registerListener(port, addressType, server);
 }
 
 void HttpServer::serve() {
-    server->serve();
+    listener->listen();
 }
 
 void HttpServer::close() {

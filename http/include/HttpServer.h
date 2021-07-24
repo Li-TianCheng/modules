@@ -6,6 +6,7 @@
 #define HTTP_HTTPSERVER_H
 
 #include "net/include/TcpServer.h"
+#include "net/include/Listener.h"
 #include "HttpSession.h"
 
 class HttpSession;
@@ -26,6 +27,7 @@ private:
     static unordered_map<string, void(*)(shared_ptr<Http>, shared_ptr<Http>)>& getMux();
 private:
     shared_ptr<TcpServer<HttpSession>> server;
+    shared_ptr<Listener> listener;
 };
 
 
