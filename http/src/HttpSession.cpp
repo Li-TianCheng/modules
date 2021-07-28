@@ -12,7 +12,7 @@ void HttpSession::handleReadDone(iter pos, size_t n) {
 }
 
 HttpSession::HttpSession() : isFirstPing(true), request(nullptr), status(0), timeout(0) {
-    ping = ObjPool::allocate<Ping>(*(sockaddr_in*)&address);
+
 }
 
 void HttpSession::match(shared_ptr<Http> request) {
@@ -151,6 +151,7 @@ string HttpSession::getGMTTime() {
 }
 
 void HttpSession::sessionInit() {
+    ping = ObjPool::allocate<Ping>(*(sockaddr_in*)&address);
     uuid = addTicker(0, 0, 1, 0);
 }
 

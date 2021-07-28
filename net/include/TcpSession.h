@@ -26,12 +26,16 @@ struct Msg {
     explicit Msg(shared_ptr<vector<char>> msg) : type(1), offset(0) {
         this->msg = msg;
     }
+    explicit Msg(shared_ptr<vector<unsigned char>> msg) : type(2), offset(0) {
+        this->msg = msg;
+    }
 };
 
 class TcpSession: public std::enable_shared_from_this<TcpSession> {
 public:
     TcpSession();
     void write(shared_ptr<vector<char>> sendMsg);
+    void write(shared_ptr<vector<unsigned char>> sendMsg);
     void write(shared_ptr<string> sendMsg);
     void closeConnection();
     void closeListen();

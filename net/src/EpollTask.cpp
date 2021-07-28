@@ -80,7 +80,7 @@ void EpollTask::handleTickerTimeOut(shared_ptr<void> arg) {
     if (e->timeToFd.find(t) != e->timeToFd.end()) {
         int fd = e->timeToFd[t];
         if (e->sessionManager.find(fd) != e->sessionManager.end()) {
-            e->sessionManager[fd]->handleTimerTimeOut(t->uuid);
+            e->sessionManager[fd]->handleTickerTimeOut(t->uuid);
         } else {
             e->timeToFd.erase(t);
             TimeSystem::deleteTicker(t);
@@ -185,6 +185,12 @@ void EpollTask::writeTask(shared_ptr<void> arg) {
                     break;
                 }
                 sendNum = send(session->epollEvent.data.fd, static_pointer_cast<vector<char>>(temp.front().msg)->data()+temp.front().offset, static_pointer_cast<vector<char>>(temp.front().msg)->size()-temp.front().offset, MSG_DONTWAIT);
+            }
+            if (temp.front().type == 2) {
+                if (temp.front().offset == static_pointer_cast<vector<unsigned char>>(temp.front().msg)->size()) {
+                    break;
+                }
+                sendNum = send(session->epollEvent.data.fd, static_pointer_cast<vector<unsigned char>>(temp.front().msg)->data()+temp.front().offset, static_pointer_cast<vector<unsigned char>>(temp.front().msg)->size()-temp.front().offset, MSG_DONTWAIT);
             }
             if (sendNum <= 0) {
                 if (errno == EAGAIN) {

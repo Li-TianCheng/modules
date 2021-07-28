@@ -43,6 +43,9 @@ unsigned short Ping::check(char* pIcmp) {
 }
 
 bool Ping::recv() {
+    if (strcmp(inet_ntoa(address.sin_addr), "127.0.0.1") == 0){
+        return true;
+    }
     sockaddr_in remote;
     socklen_t len = sizeof(remote);
     int recvNum = recvfrom(fd, readBuff, sizeof(readBuff), MSG_DONTWAIT, (sockaddr*)&remote, &len);
@@ -54,10 +57,6 @@ bool Ping::recv() {
         return false;
     }
     icmp* p = (icmp*)(readBuff + ipLen);
-    if (strcmp(inet_ntoa(remote.sin_addr), "127.0.0.1") == 0) {
-        recvfrom(fd, readBuff, sizeof(readBuff), MSG_DONTWAIT, (sockaddr*)&remote, &len);
-        return true;
-    }
     if (p->icmp_type == ICMP_ECHOREPLY && p->icmp_id == getpid() && inet_ntoa(address.sin_addr) == inet_ntoa(remote.sin_addr)) {
         return true;
     }
@@ -65,6 +64,9 @@ bool Ping::recv() {
 }
 
 bool Ping::send() {
+    if (strcmp(inet_ntoa(address.sin_addr), "127.0.0.1") == 0){
+        return true;
+    }
     icmp* p = (icmp*)writeBuff;
     p->icmp_type = ICMP_ECHO;
     p->icmp_code = 0;
