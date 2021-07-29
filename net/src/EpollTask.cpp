@@ -72,7 +72,7 @@ void EpollTask::delSession(int fd) {
 
 void EpollTask::handleTickerTimeOut(shared_ptr<void> arg) {
     auto t = static_pointer_cast<Time>(arg);
-    auto e = static_pointer_cast<EpollTask>(t->ePtr.lock());
+    auto e = static_pointer_cast<EpollTask>(t->ePtr);
     if (e == nullptr) {
         TimeSystem::deleteTicker(t);
         return;
@@ -90,7 +90,7 @@ void EpollTask::handleTickerTimeOut(shared_ptr<void> arg) {
 
 void EpollTask::handleTimerTimeOut(shared_ptr<void> arg) {
     auto t = static_pointer_cast<Time>(arg);
-    auto e = static_pointer_cast<EpollTask>(t->ePtr.lock());
+    auto e = static_pointer_cast<EpollTask>(t->ePtr);
     if (e == nullptr) {
         TimeSystem::deleteTicker(t);
         return;
@@ -107,7 +107,7 @@ void EpollTask::handleTimerTimeOut(shared_ptr<void> arg) {
 void EpollTask::handleTicker(shared_ptr<void> arg) {
     auto session = static_pointer_cast<EpollEventArg>(arg)->session;
     auto t = static_pointer_cast<EpollEventArg>(arg)->t;
-    auto e = static_pointer_cast<EpollTask>(t->ePtr.lock());
+    auto e = static_pointer_cast<EpollTask>(t->ePtr);
     if (e == nullptr) {
         TimeSystem::deleteTicker(t);
         return;
@@ -121,7 +121,7 @@ void EpollTask::handleTicker(shared_ptr<void> arg) {
 void EpollTask::handleTimer(shared_ptr<void> arg) {
     auto session = static_pointer_cast<EpollEventArg>(arg)->session;
     auto t = static_pointer_cast<EpollEventArg>(arg)->t;
-    auto e = static_pointer_cast<EpollTask>(t->ePtr.lock());
+    auto e = static_pointer_cast<EpollTask>(t->ePtr);
     if (e == nullptr) {
         TimeSystem::deleteTicker(t);
         return;
@@ -270,6 +270,10 @@ void EpollTask::cycleTask(shared_ptr<void> arg) {
             }
         }
     }
+    for (auto& t : epoll->timeToFd) {
+        TimeSystem::deleteTicker(t.first);
+    }
+    epoll->timeToFd.clear();
     auto e = ObjPool::allocate<Event>(EventEndCycle, nullptr);
     epoll->receiveEvent(e);
     epoll->running = false;

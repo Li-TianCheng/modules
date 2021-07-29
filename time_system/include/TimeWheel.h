@@ -35,7 +35,6 @@ private:
     static void handleTickerTimeOut(shared_ptr<void> arg);
     static void handleEndCycle(shared_ptr<void> arg);
 private:
-    unordered_set<shared_ptr<Time>> toDelete;
     vector<queue<shared_ptr<Event>>> millisecond;
     vector<queue<shared_ptr<Event>>> second;
     vector<queue<shared_ptr<Event>>> minute;

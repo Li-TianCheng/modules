@@ -18,6 +18,7 @@ public:
     ResourceManager();
     ~ResourceManager() override = default;
 private:
+    void cycleClear() override;
     static void handleIncrease(shared_ptr<void> arg);
     static void handleDecrease(shared_ptr<void> arg);
     static void handleTimeOut(shared_ptr<void> arg);

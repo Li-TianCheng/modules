@@ -23,7 +23,7 @@ void ResourceManager::handleDecrease(shared_ptr<void> arg) {
 
 void ResourceManager::handleTimeOut(shared_ptr<void> arg) {
     auto t = static_pointer_cast<Time>(arg);
-    auto rm = static_pointer_cast<ResourceManager>(t->ePtr.lock());
+    auto rm = static_pointer_cast<ResourceManager>(t->ePtr);
     if (rm != nullptr && rm->timeToResource.find(t) != rm->timeToResource.end()) {
         rm->timeToResource[t]->checkOut();
     }
@@ -32,7 +32,7 @@ void ResourceManager::handleTimeOut(shared_ptr<void> arg) {
 void ResourceManager::handleRegisterResource(shared_ptr<void> arg) {
     auto r = static_pointer_cast<ResourceArg>(arg);
     auto t = static_pointer_cast<Time>(r->arg);
-    auto rm = static_pointer_cast<ResourceManager>(t->ePtr.lock());
+    auto rm = static_pointer_cast<ResourceManager>(t->ePtr);
     if (rm != nullptr) {
         rm->timeToResource[t] = r->resource;
         rm->resourceToTime[r->resource] = t;
@@ -50,4 +50,10 @@ void ResourceManager::handleUnregisterResource(shared_ptr<void> arg) {
             rm->resourceToTime.erase(r->resource);
         }
     }
+}
+
+void ResourceManager::cycleClear() {
+    EventSystem::cycleClear();
+    timeToResource.clear();
+    resourceToTime.clear();
 }

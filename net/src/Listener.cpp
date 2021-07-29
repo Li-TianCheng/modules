@@ -83,6 +83,7 @@ void Listener::listen() {
         if (flag) {
             break;
         }
+        sleep(1);
     }
 }
 
@@ -119,7 +120,7 @@ void Listener::handleCloseListen(shared_ptr<void> arg) {
 }
 
 void Listener::addNewSession(shared_ptr<TcpSession> session) {
-    if (session == nullptr && waitCLose != nullptr && waitCLose->sessionNum+waitCLose->timeToFd.size() == 0) {
+    if (session == nullptr && waitCLose != nullptr && waitCLose->sessionNum == 0) {
         malloc_trim(0);
         waitCLose->needClose = true;
         epollList.remove(waitCLose);

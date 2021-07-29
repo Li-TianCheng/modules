@@ -20,8 +20,8 @@ public:
     int m;
     int h;
     string uuid;
-    std::weak_ptr<EventSystem> ePtr;
-    std::weak_ptr<TimeWheel> tPtr;
+    shared_ptr<EventSystem> ePtr;
+    shared_ptr<TimeWheel> tPtr;
 };
 
 

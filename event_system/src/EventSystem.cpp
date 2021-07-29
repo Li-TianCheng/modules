@@ -59,7 +59,12 @@ void EventSystem::cycle() {
 
 void EventSystem::cycleInit() {}
 
-void EventSystem::cycleClear() {}
+void EventSystem::cycleClear() {
+    shutdown = true;
+    while (!eventQueue.empty()) {
+        eventQueue.pop();
+    }
+}
 
 EventSystem::EventSystem() : shutdown(false) {}
 
