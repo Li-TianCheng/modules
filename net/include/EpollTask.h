@@ -35,7 +35,7 @@ private:
     friend class Listener;
     void init();
     void addNewSession(shared_ptr<TcpSession> session);
-    void delSession(int fd);
+    void deleteSession(int fd);
     static void cycleTask(shared_ptr<void> arg);
     static void handleTickerTimeOut(shared_ptr<void> arg);
     static void handleTimerTimeOut(shared_ptr<void> arg);
@@ -46,6 +46,7 @@ private:
     static void handleCloseConnection(shared_ptr<void> arg);
     static void handleCloseListen(shared_ptr<void> arg);
     static void handleAddSession(shared_ptr<void> arg);
+    static void handleDeleteSession(shared_ptr<void> arg);
 private:
     std::atomic<bool> needClose;
     std::atomic<bool> running;

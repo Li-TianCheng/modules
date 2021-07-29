@@ -28,7 +28,6 @@ private:
     string getGMTTime();
 private:
     shared_ptr<Ping> ping;
-    bool isFirstPing;
     shared_ptr<Http> request;
     string key;
     int count;

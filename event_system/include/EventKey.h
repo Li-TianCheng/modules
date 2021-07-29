@@ -11,6 +11,7 @@ enum EventKey{
     EventTicker,
     EventDeleteTicker,
     EventAddSession,
+    EventDeleteSession,
     EventTimerTimeOut,
     EventTickerTimeOut,
     EventIncrease,

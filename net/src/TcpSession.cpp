@@ -4,7 +4,7 @@
 
 #include "TcpSession.h"
 
-TcpSession::TcpSession() : isCloseConnection(false), isWrite(false), isRead(false) {
+TcpSession::TcpSession() : isCloseConnection(false), isWrite(false), isRead(false), isWriteDone(true) {
     len = sizeof(address);
 }
 
@@ -12,6 +12,7 @@ void TcpSession::write(shared_ptr<vector<char>> sendMsg) {
     if (isCloseConnection || sendMsg == nullptr || (*sendMsg).empty()) {
         return;
     }
+    isWriteDone = false;
     mutex.lock();
     if (!msgQueue.empty() && sendMsg->size() <= AppendSize) {
         if (msgQueue.back().type == 0){
@@ -41,6 +42,7 @@ void TcpSession::write(shared_ptr<vector<unsigned char>> sendMsg) {
     if (isCloseConnection || sendMsg == nullptr || (*sendMsg).empty()) {
         return;
     }
+    isWriteDone = false;
     mutex.lock();
     if (!msgQueue.empty() && sendMsg->size() <= AppendSize) {
         if (msgQueue.back().type == 0){
@@ -70,6 +72,7 @@ void TcpSession::write(shared_ptr<string> sendMsg) {
     if (isCloseConnection || sendMsg == nullptr || (*sendMsg).empty()) {
         return;
     }
+    isWriteDone = false;
     mutex.lock();
     if (!msgQueue.empty() && sendMsg->size() <= AppendSize) {
         if (msgQueue.back().type == 0){
@@ -97,16 +100,17 @@ void TcpSession::write(shared_ptr<string> sendMsg) {
 
 void TcpSession::closeConnection() {
     isCloseConnection = true;
-    mutex.lock();
-    if (msgQueue.empty()) {
-        auto e = ObjPool::allocate<Event>(EventCloseConnection, shared_from_this());
-        epoll->receiveEvent(e);
-    }
-    mutex.unlock();
+    auto e = ObjPool::allocate<Event>(EventCloseConnection, shared_from_this());
+    epoll->receiveEvent(e);
 }
 
 void TcpSession::closeListen() {
     auto e = ObjPool::allocate<Event>(EventCloseListen, shared_from_this());
+    epoll->receiveEvent(e);
+}
+
+void TcpSession::deleteSession() {
+    auto e = ObjPool::allocate<Event>(EventDeleteSession, shared_from_this());
     epoll->receiveEvent(e);
 }
 

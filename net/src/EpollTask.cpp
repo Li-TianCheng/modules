@@ -35,6 +35,7 @@ void EpollTask::init() {
     registerEvent(EventTicker, handleTicker);
     registerEvent(EventTimer, handleTimer);
     registerEvent(EventAddSession, handleAddSession);
+    registerEvent(EventDeleteSession, handleDeleteSession);
 }
 
 void EpollTask::handleAddSession(shared_ptr<void> arg) {
@@ -56,7 +57,7 @@ void EpollTask::addNewSession(shared_ptr<TcpSession> session) {
     LOG(Info, log.str());
 }
 
-void EpollTask::delSession(int fd) {
+void EpollTask::deleteSession(int fd) {
     epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &sessionManager[fd]->epollEvent);
     if (sessionManager.find(fd) != sessionManager.end()) {
         auto session = sessionManager[fd];
@@ -222,11 +223,13 @@ void EpollTask::writeTask(shared_ptr<void> arg) {
     }
     session->mutex.lock();
     if (session->msgQueue.empty()) {
+        session->isWriteDone = true;
         session->epollEvent.events &= ~Write;
     }
     session->mutex.unlock();
     if (session->isCloseConnection) {
-        ::shutdown(session->epollEvent.data.fd, SHUT_RD);
+        auto e = ObjPool::allocate<Event>(EventCloseConnection, session);
+        static_pointer_cast<EpollTask>(session->epoll)->receiveEvent(e);
     }
     session->isWrite = false;
     epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
@@ -251,7 +254,7 @@ void EpollTask::cycleTask(shared_ptr<void> arg) {
         for (int i = 0; i < num; i++) {
             auto event = events[i];
             if (((event.events & RdHup) == RdHup) || ((event.events & Err) == Err) || ((event.events & Hup) == Hup)) {
-                epoll->delSession(event.data.fd);
+                epoll->deleteSession(event.data.fd);
             } else {
                 if ((event.events & Read) == Read) {
                     auto session = epoll->sessionManager[event.data.fd];
@@ -284,15 +287,18 @@ void EpollTask::cycleTask(shared_ptr<void> arg) {
 
 void EpollTask::handleCloseConnection(shared_ptr<void> arg) {
     auto session = static_pointer_cast<TcpSession>(arg);
-    session->mutex.lock();
-    if (session->msgQueue.empty()) {
-        ::shutdown(session->epollEvent.data.fd, SHUT_RD);
+    if (session->isWriteDone) {
+        ::shutdown(session->epollEvent.data.fd, SHUT_RDWR);
         epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
     }
-    session->mutex.unlock();
 }
 
 void EpollTask::handleCloseListen(shared_ptr<void> arg) {
     auto session = static_pointer_cast<TcpSession>(arg);
     session->server->close();
+}
+
+void EpollTask::handleDeleteSession(shared_ptr<void> arg) {
+    auto session = static_pointer_cast<TcpSession>(arg);
+    static_pointer_cast<EpollTask>(session->epoll)->deleteSession(session->epollEvent.data.fd);
 }

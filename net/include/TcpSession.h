@@ -39,6 +39,7 @@ public:
     void write(shared_ptr<string> sendMsg);
     void closeConnection();
     void closeListen();
+    void deleteSession();
     const string& addTicker(int h, int m, int s, int ms);
     const string& addTimer(int h, int m, int s, int ms);
     void readDone(size_t n);
@@ -58,6 +59,7 @@ protected:
     std::atomic<bool> isCloseConnection;
     std::atomic<bool> isWrite;
     std::atomic<bool> isRead;
+    std::atomic<bool> isWriteDone;
     deque<Msg> msgQueue;
     Mutex mutex;
     shared_ptr<EventSystem> epoll;
