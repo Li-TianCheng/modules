@@ -68,6 +68,7 @@ void EpollTask::deleteSession(int fd) {
         log << "EpollTask[" << this << "] deleteSession[" << session << "]";
         LOG(Info, log.str());
     }
+    ::shutdown(fd, SHUT_RDWR);
     ::close(fd);
 }
 
@@ -144,9 +145,10 @@ void EpollTask::readTask(shared_ptr<void> arg) {
     LOG(Info, log.str());
     int res = session->readBuffer.readFromFd(session->epollEvent.data.fd);
     if (res == -1) {
-        session->epollEvent.events = Read|Err|Hup|RdHup|Et|OneShot;
+        auto epoll = static_pointer_cast<EpollTask>(session->epoll);
+        auto e = ObjPool::allocate<Event>(EventDeleteSession, session);
+        epoll->receiveEvent(e);
         session->isRead = false;
-        epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
         std::ostringstream log;
         log << "session[" << session << "] readTask failed";
         LOG(Warn, log.str());
@@ -208,9 +210,10 @@ void EpollTask::writeTask(shared_ptr<void> arg) {
                     LOG(Info, log.str());
                     return;
                 } else {
-                    session->epollEvent.events = Read|Err|Hup|RdHup|Et|OneShot;
+                    auto epoll = static_pointer_cast<EpollTask>(session->epoll);
+                    auto e = ObjPool::allocate<Event>(EventDeleteSession, session);
+                    epoll->receiveEvent(e);
                     session->isWrite = false;
-                    epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
                     std::ostringstream log;
                     log << "session[" << session << "] writeTask failed";
                     LOG(Warn, log.str());
@@ -288,8 +291,7 @@ void EpollTask::cycleTask(shared_ptr<void> arg) {
 void EpollTask::handleCloseConnection(shared_ptr<void> arg) {
     auto session = static_pointer_cast<TcpSession>(arg);
     if (session->isWriteDone) {
-        ::shutdown(session->epollEvent.data.fd, SHUT_RDWR);
-        epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
+        static_pointer_cast<EpollTask>(session->epoll)->deleteSession(session->epollEvent.data.fd);
     }
 }
 

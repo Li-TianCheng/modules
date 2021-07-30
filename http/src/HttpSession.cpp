@@ -162,12 +162,12 @@ void HttpSession::sessionClear() {
 
 void HttpSession::handleTickerTimeOut(const string &uuid) {
     if (this->uuid == uuid) {
+        timeout++;
         if (!ping->recv() || timeout > 30) {
             deleteSession();
             return;
         }
         ping->send();
-        timeout++;
     }
 }
 
