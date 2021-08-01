@@ -15,6 +15,7 @@ struct Http;
 class HttpServer {
 public:
     HttpServer(int port, AddressType addressType);
+    HttpServer(shared_ptr<Listener> listener, int port, AddressType addressType);
     void serve();
     void close();
     void registerHandler(const string& pattern, void(*handle)(shared_ptr<Http>, shared_ptr<Http>));

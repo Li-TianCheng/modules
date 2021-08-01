@@ -10,6 +10,12 @@ HttpServer::HttpServer(int port, AddressType addressType) {
     listener->registerListener(port, addressType, server);
 }
 
+HttpServer::HttpServer(shared_ptr<Listener> listener, int port, AddressType addressType) {
+    this->listener = listener;
+    server = ObjPool::allocate<TcpServer<HttpSession>>();
+    listener->registerListener(port, addressType, server);
+}
+
 void HttpServer::serve() {
     listener->listen();
 }

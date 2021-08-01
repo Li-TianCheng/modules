@@ -8,91 +8,37 @@ TcpSession::TcpSession() : isCloseConnection(false), isWrite(false), isRead(fals
     len = sizeof(address);
 }
 
-void TcpSession::write(shared_ptr<vector<char>> sendMsg) {
-    if (isCloseConnection || sendMsg == nullptr || (*sendMsg).empty()) {
+void TcpSession::write(shared_ptr<vector<char>> sendMsg, size_t offset, size_t end) {
+    if (isCloseConnection || sendMsg == nullptr || (*sendMsg).empty() || offset >= sendMsg->size()) {
         return;
     }
     isWriteDone = false;
     mutex.lock();
-    if (!msgQueue.empty() && sendMsg->size() <= AppendSize) {
-        if (msgQueue.back().type == 0){
-            shared_ptr<string> msg = static_pointer_cast<string>(msgQueue.back().msg);
-            msg->reserve(msg->size()+sendMsg->size());
-            msg->insert(msg->end(), sendMsg->data(), sendMsg->data()+sendMsg->size());
-        }
-        if (msgQueue.back().type == 1) {
-            shared_ptr<vector<char>> msg = static_pointer_cast<vector<char>>(msgQueue.back().msg);
-            msg->reserve(msg->size()+sendMsg->size());
-            msg->insert(msg->end(), sendMsg->data(), sendMsg->data()+sendMsg->size());
-        }
-        if (msgQueue.back().type == 2) {
-            shared_ptr<vector<unsigned char>> msg = static_pointer_cast<vector<unsigned char>>(msgQueue.back().msg);
-            msg->reserve(msg->size()+sendMsg->size());
-            msg->insert(msg->end(), sendMsg->data(), sendMsg->data()+sendMsg->size());
-        }
-    } else {
-        msgQueue.emplace_back(sendMsg);
-    }
+    msgQueue.emplace_back(sendMsg, offset, end);
     epollEvent.events |= Write;
     mutex.unlock();
     epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent);
 }
 
-void TcpSession::write(shared_ptr<vector<unsigned char>> sendMsg) {
-    if (isCloseConnection || sendMsg == nullptr || (*sendMsg).empty()) {
+void TcpSession::write(shared_ptr<vector<unsigned char>> sendMsg, size_t offset, size_t end) {
+    if (isCloseConnection || sendMsg == nullptr || (*sendMsg).empty() || offset >= sendMsg->size()) {
         return;
     }
     isWriteDone = false;
     mutex.lock();
-    if (!msgQueue.empty() && sendMsg->size() <= AppendSize) {
-        if (msgQueue.back().type == 0){
-            shared_ptr<string> msg = static_pointer_cast<string>(msgQueue.back().msg);
-            msg->reserve(msg->size()+sendMsg->size());
-            msg->insert(msg->end(), sendMsg->data(), sendMsg->data()+sendMsg->size());
-        }
-        if (msgQueue.back().type == 1) {
-            shared_ptr<vector<char>> msg = static_pointer_cast<vector<char>>(msgQueue.back().msg);
-            msg->reserve(msg->size()+sendMsg->size());
-            msg->insert(msg->end(), sendMsg->data(), sendMsg->data()+sendMsg->size());
-        }
-        if (msgQueue.back().type == 2) {
-            shared_ptr<vector<unsigned char>> msg = static_pointer_cast<vector<unsigned char>>(msgQueue.back().msg);
-            msg->reserve(msg->size()+sendMsg->size());
-            msg->insert(msg->end(), sendMsg->data(), sendMsg->data()+sendMsg->size());
-        }
-    } else {
-        msgQueue.emplace_back(sendMsg);
-    }
+    msgQueue.emplace_back(sendMsg, offset, end);
     epollEvent.events |= Write;
     mutex.unlock();
     epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent);
 }
 
-void TcpSession::write(shared_ptr<string> sendMsg) {
-    if (isCloseConnection || sendMsg == nullptr || (*sendMsg).empty()) {
+void TcpSession::write(shared_ptr<string> sendMsg, size_t offset, size_t end) {
+    if (isCloseConnection || sendMsg == nullptr || (*sendMsg).empty() || offset >= sendMsg->size()) {
         return;
     }
     isWriteDone = false;
     mutex.lock();
-    if (!msgQueue.empty() && sendMsg->size() <= AppendSize) {
-        if (msgQueue.back().type == 0){
-            shared_ptr<string> msg = static_pointer_cast<string>(msgQueue.back().msg);
-            msg->reserve(msg->size()+sendMsg->size());
-            msg->insert(msg->end(), sendMsg->data(), sendMsg->data()+sendMsg->size());
-        }
-        if (msgQueue.back().type == 1) {
-            shared_ptr<vector<char>> msg = static_pointer_cast<vector<char>>(msgQueue.back().msg);
-            msg->reserve(msg->size()+sendMsg->size());
-            msg->insert(msg->end(), sendMsg->data(), sendMsg->data()+sendMsg->size());
-        }
-        if (msgQueue.back().type == 2) {
-            shared_ptr<vector<unsigned char>> msg = static_pointer_cast<vector<unsigned char>>(msgQueue.back().msg);
-            msg->reserve(msg->size()+sendMsg->size());
-            msg->insert(msg->end(), sendMsg->data(), sendMsg->data()+sendMsg->size());
-        }
-    } else {
-        msgQueue.emplace_back(sendMsg);
-    }
+    msgQueue.emplace_back(sendMsg, offset, end);
     epollEvent.events |= Write;
     mutex.unlock();
     epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent);

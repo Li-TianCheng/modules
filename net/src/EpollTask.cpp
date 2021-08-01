@@ -58,8 +58,8 @@ void EpollTask::addNewSession(shared_ptr<TcpSession> session) {
 }
 
 void EpollTask::deleteSession(int fd) {
-    epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &sessionManager[fd]->epollEvent);
     if (sessionManager.find(fd) != sessionManager.end()) {
+        epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &sessionManager[fd]->epollEvent);
         auto session = sessionManager[fd];
         session->sessionClear();
         sessionManager.erase(fd);
@@ -177,23 +177,17 @@ void EpollTask::writeTask(shared_ptr<void> arg) {
     while (!temp.empty()) {
         while (true) {
             ssize_t sendNum;
+            if (temp.front().offset >= temp.front().end) {
+                break;
+            }
             if (temp.front().type == 0) {
-                if (temp.front().offset == static_pointer_cast<string>(temp.front().msg)->size()) {
-                    break;
-                }
-                sendNum = send(session->epollEvent.data.fd, static_pointer_cast<string>(temp.front().msg)->data()+temp.front().offset, static_pointer_cast<string>(temp.front().msg)->size()-temp.front().offset, MSG_DONTWAIT);
+                sendNum = send(session->epollEvent.data.fd, static_pointer_cast<string>(temp.front().msg)->data()+temp.front().offset, temp.front().end-temp.front().offset, MSG_DONTWAIT);
             }
             if (temp.front().type == 1) {
-                if (temp.front().offset == static_pointer_cast<vector<char>>(temp.front().msg)->size()) {
-                    break;
-                }
-                sendNum = send(session->epollEvent.data.fd, static_pointer_cast<vector<char>>(temp.front().msg)->data()+temp.front().offset, static_pointer_cast<vector<char>>(temp.front().msg)->size()-temp.front().offset, MSG_DONTWAIT);
+                sendNum = send(session->epollEvent.data.fd, static_pointer_cast<vector<char>>(temp.front().msg)->data()+temp.front().offset, temp.front().end-temp.front().offset, MSG_DONTWAIT);
             }
             if (temp.front().type == 2) {
-                if (temp.front().offset == static_pointer_cast<vector<unsigned char>>(temp.front().msg)->size()) {
-                    break;
-                }
-                sendNum = send(session->epollEvent.data.fd, static_pointer_cast<vector<unsigned char>>(temp.front().msg)->data()+temp.front().offset, static_pointer_cast<vector<unsigned char>>(temp.front().msg)->size()-temp.front().offset, MSG_DONTWAIT);
+                sendNum = send(session->epollEvent.data.fd, static_pointer_cast<vector<unsigned char>>(temp.front().msg)->data()+temp.front().offset, temp.front().end-temp.front().offset, MSG_DONTWAIT);
             }
             if (sendNum <= 0) {
                 if (errno == EAGAIN) {

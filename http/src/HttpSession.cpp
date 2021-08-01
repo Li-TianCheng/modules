@@ -27,7 +27,7 @@ void HttpSession::match(shared_ptr<Http> request) {
         HttpServer::getMux()[request->line["url"]](request, response);
     } else {
         for (auto& m : HttpServer::getRegexMux()) {
-            if (std::regex_match(request->head["url"], std::regex(m.first))) {
+            if (std::regex_match(request->line["url"], std::regex(m.first))) {
                 response->line["status"] = "200";
                 response->line["msg"] = "OK";
                 m.second(request, response);

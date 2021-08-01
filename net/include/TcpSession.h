@@ -19,24 +19,31 @@ static const int AppendSize = 1024;
 struct Msg {
     int type;
     size_t offset;
+    size_t end;
     shared_ptr<void> msg;
-    explicit Msg(shared_ptr<string> msg) : type(0), offset(0) {
-        this->msg = msg;
+    explicit Msg(shared_ptr<string> msg, size_t offset, size_t end) : type(0), msg(msg), offset(offset), end(end) {
+        if (end == -1) {
+            this->end = msg->size();
+        }
     }
-    explicit Msg(shared_ptr<vector<char>> msg) : type(1), offset(0) {
-        this->msg = msg;
+    explicit Msg(shared_ptr<vector<char>> msg, size_t offset, size_t end) : type(1), msg(msg), offset(offset), end(end) {
+        if (end == -1) {
+            this->end = msg->size();
+        }
     }
-    explicit Msg(shared_ptr<vector<unsigned char>> msg) : type(2), offset(0) {
-        this->msg = msg;
+    explicit Msg(shared_ptr<vector<unsigned char>> msg, size_t offset, size_t end) : type(2), msg(msg), offset(offset), end(end) {
+        if (end == -1) {
+            this->end = msg->size();
+        }
     }
 };
 
 class TcpSession: public std::enable_shared_from_this<TcpSession> {
 public:
     TcpSession();
-    void write(shared_ptr<vector<char>> sendMsg);
-    void write(shared_ptr<vector<unsigned char>> sendMsg);
-    void write(shared_ptr<string> sendMsg);
+    void write(shared_ptr<vector<char>> sendMsg, size_t offset=0, size_t end=-1);
+    void write(shared_ptr<vector<unsigned char>> sendMsg, size_t offset=0, size_t end=-1);
+    void write(shared_ptr<string> sendMsg, size_t offset=0, size_t end=-1);
     void closeConnection();
     void closeListen();
     void deleteSession();
