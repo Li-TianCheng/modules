@@ -21,12 +21,6 @@
 #include "EpollTask.h"
 #include "TcpSession.h"
 
-static const int MaxWaitNum = 500;
-static const int CheckTime = 1000;
-static const int MaxEpollNum = 10;
-static const int IncreaseSessionNum = 1000;
-static const int DecreaseAvgNum = IncreaseSessionNum / MaxEpollNum;
-
 class Listener: public EventSystem {
 public:
     Listener();
@@ -40,6 +34,9 @@ private:
 private:
     int epollFd;
     int waitTime;
+    int checkTime;
+    int maxEpollNum;
+    int epollSessionNum;
     unordered_map<int, shared_ptr<TcpServerBase>> listenMap;
     list<shared_ptr<EpollTask>> epollList;
     shared_ptr<EpollTask> waitCLose;

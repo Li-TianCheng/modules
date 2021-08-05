@@ -9,15 +9,13 @@
 #include <cerrno>
 #include <sys/socket.h>
 
-static const int BufferChunkSize = 1024 * 16;
-
 using std::deque;
 
 struct iter;
 
 class Buffer {
 public:
-    Buffer();
+    explicit Buffer(int bufferChunkSize);
     iter getReadPos();
     size_t getMsgNum();
     void write(const char* c, size_t n);
@@ -31,17 +29,18 @@ private:
     deque<char*> buffer;
     size_t readIndex;
     size_t writeIndex;
+    int bufferChunkSize;
 };
 
 struct iter {
 public:
-    iter(deque<char*>* buffer, size_t readIndex) : buffer(buffer), readIndex(readIndex){}
+    iter(int bufferChunkSize, deque<char*>* buffer, size_t readIndex) : bufferChunkSize(bufferChunkSize), buffer(buffer), readIndex(readIndex){}
     iter& operator++(){
         readIndex++;
         return *this;
     }
     iter operator++(int){
-        iter it(buffer, readIndex);
+        iter it(bufferChunkSize, buffer, readIndex);
         readIndex++;
         return it;
     }
@@ -50,7 +49,7 @@ public:
         return *this;
     }
     iter operator--(int){
-        iter it(buffer, readIndex);
+        iter it(bufferChunkSize, buffer, readIndex);
         readIndex--;
         return it;
     }
@@ -69,21 +68,22 @@ public:
         return *this;
     }
     iter operator+(int n){
-        iter it(buffer, readIndex);
+        iter it(bufferChunkSize, buffer, readIndex);
         it.readIndex += n;
         return it;
     };
     iter operator-(int n){
-        iter it(buffer, readIndex);
+        iter it(bufferChunkSize, buffer, readIndex);
         it.readIndex -= n;
         return it;
     };
     char& operator*() const{
-        return (*buffer)[readIndex/BufferChunkSize][readIndex % BufferChunkSize];
+        return (*buffer)[readIndex/bufferChunkSize][readIndex % bufferChunkSize];
     }
 private:
     deque<char*>* buffer;
     size_t readIndex;
+    int bufferChunkSize;
 };
 
 

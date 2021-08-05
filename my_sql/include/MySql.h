@@ -14,14 +14,12 @@
 #include "time_system/include/TimeSystem.h"
 #include "task_system/include/TaskSystem.h"
 #include "log/include/LogSystem.h"
+#include "config_system/include/ConfigSystem.h"
 
 using std::string;
 using std::queue;
 using std::vector;
 using std::unordered_map;
-
-static const int InitConnNum = 10;
-static const int MaxConnNum  = 100;
 
 struct Connection {
     MYSQL conn;
@@ -47,6 +45,8 @@ private:
     const string dataBase;
     const string host;
     const int port;
+    int initConnNum;
+    int maxConnNum;
     shared_ptr<Connection> free;
     Mutex mutex;
     std::atomic<int> connNum;

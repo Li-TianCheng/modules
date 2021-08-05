@@ -4,7 +4,9 @@
 
 #include "net/include/Listener.h"
 
-Listener::Listener() : waitTime(-1), waitCLose(nullptr)  {
+Listener::Listener() : waitTime(-1), waitCLose(nullptr), checkTime(ConfigSystem::getConfig()["system"]["net"]["listener"]["check_time"].asInt()),
+                        epollSessionNum(ConfigSystem::getConfig()["system"]["net"]["listener"]["epoll_session_num"].asInt()),
+                        maxEpollNum(ConfigSystem::getConfig()["system"]["net"]["listener"]["max_epoll_task_num"].asInt()) {
     signal(SIGPIPE, SIG_IGN);
     epollFd = epoll_create(1);
     if (epollFd == -1) {
@@ -48,7 +50,7 @@ void Listener::listen() {
         epoll_event events[listenMap.size()];
         int num = epoll_wait(epollFd, events, listenMap.size(), waitTime);
         if (num <= 0) {
-            waitTime = CheckTime;
+            waitTime = checkTime;
             addNewSession(nullptr);
         } else {
             waitTime = 0;
@@ -97,14 +99,14 @@ Listener::~Listener() {
 
 void Listener::cycleInit() {
     for (auto& it : listenMap) {
-        int err = ::listen(it.first, MaxWaitNum);
+        int err = ::listen(it.first, ConfigSystem::getConfig()["system"]["net"]["listener"]["listen_num"].asInt());
         if (err == -1){
             ::close(it.first);
             throw std::runtime_error(std::to_string(it.first)+"监听失败");
         }
         LOG(Info, "port:"+std::to_string(it.second->port)+" listen begin");
     }
-    auto e = ObjPool::allocate<EpollTask>();
+    auto e = ObjPool::allocate<EpollTask>(epollSessionNum);
     epollList.push_back(e);
     e->run();
 }
@@ -164,7 +166,7 @@ void Listener::addNewSession(shared_ptr<TcpSession> session) {
             tarIter->receiveEvent(e);
             tarIter->sessionNum++;
         }
-        if (second+1 >= IncreaseSessionNum && epollList.size() < MaxEpollNum) {
+        if (second+1 >= epollSessionNum && epollList.size() < maxEpollNum) {
             waitCLose = nullptr;
         }
     } else {
@@ -174,14 +176,14 @@ void Listener::addNewSession(shared_ptr<TcpSession> session) {
             minIter->receiveEvent(e);
             minIter->sessionNum++;
         }
-        if (min+1 >= IncreaseSessionNum && epollList.size() < MaxEpollNum) {
-            auto e = ObjPool::allocate<EpollTask>();
+        if (min+1 >= epollSessionNum && epollList.size() < maxEpollNum) {
+            auto e = ObjPool::allocate<EpollTask>(epollSessionNum);
             epollList.push_back(e);
             std::ostringstream log;
             log << "EpollList increase, current num:" << epollList.size();
             LOG(Info, log.str());
             e->run();
-        } else if (epollList.size() > 1 && sum / epollList.size() < DecreaseAvgNum) {
+        } else if (epollList.size() > 1 && sum / epollList.size() < epollSessionNum/maxEpollNum) {
             waitCLose = minIter;
         }
     }

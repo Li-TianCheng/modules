@@ -5,12 +5,12 @@
 #include "net/include/Buffer.h"
 #include <iostream>
 
-Buffer::Buffer() : buffer(1), readIndex(0), writeIndex(0) {
-    buffer[0] = new char[BufferChunkSize];
+Buffer::Buffer(int bufferChunkSize) : bufferChunkSize(bufferChunkSize), buffer(1), readIndex(0), writeIndex(0) {
+    buffer[0] = new char[bufferChunkSize];
 }
 
 iter Buffer::getReadPos() {
-    return iter(&buffer, readIndex);
+    return iter(bufferChunkSize, &buffer, readIndex);
 }
 
 size_t Buffer::getMsgNum() {
@@ -19,10 +19,10 @@ size_t Buffer::getMsgNum() {
 
 void Buffer::write(const char* c, size_t n) {
     for (int i = 0; i < n; i++) {
-        if (writeIndex == BufferChunkSize * buffer.size()) {
-            buffer.push_back(new char[BufferChunkSize]);
+        if (writeIndex == bufferChunkSize * buffer.size()) {
+            buffer.push_back(new char[bufferChunkSize]);
         }
-        buffer[writeIndex/BufferChunkSize][writeIndex%BufferChunkSize] = *(c+i);
+        buffer[writeIndex/bufferChunkSize][writeIndex%bufferChunkSize] = *(c+i);
         writeIndex++;
     }
 }
@@ -39,11 +39,11 @@ void Buffer::readDone(size_t n) {
 
 int Buffer::readFromFd(int fd) {
     while (true) {
-        if (writeIndex == BufferChunkSize * buffer.size()) {
-            buffer.push_back(new char[BufferChunkSize]);
+        if (writeIndex == bufferChunkSize * buffer.size()) {
+            buffer.push_back(new char[bufferChunkSize]);
         }
-        size_t size = BufferChunkSize - writeIndex % BufferChunkSize;
-        ssize_t recvNum = ::recv(fd, buffer[writeIndex/BufferChunkSize]+writeIndex%BufferChunkSize, size, MSG_DONTWAIT);
+        size_t size = bufferChunkSize - writeIndex % bufferChunkSize;
+        ssize_t recvNum = ::recv(fd, buffer[writeIndex/bufferChunkSize]+writeIndex%bufferChunkSize, size, MSG_DONTWAIT);
         if (recvNum <= 0) {
             if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
                 return 0;
@@ -58,8 +58,8 @@ int Buffer::readFromFd(int fd) {
 
 int Buffer::writeToFd(int fd) {
     while (readIndex < writeIndex) {
-        size_t size = std::min(BufferChunkSize-readIndex%BufferChunkSize, writeIndex-readIndex);
-        ssize_t sendNum = ::send(fd, buffer[readIndex/BufferChunkSize] + readIndex % BufferChunkSize, size, MSG_DONTWAIT);
+        size_t size = std::min(bufferChunkSize-readIndex%bufferChunkSize, writeIndex-readIndex);
+        ssize_t sendNum = ::send(fd, buffer[readIndex/bufferChunkSize] + readIndex % bufferChunkSize, size, MSG_DONTWAIT);
         if (sendNum <= 0) {
             if (errno == EAGAIN) {
                 shrink();
@@ -78,16 +78,16 @@ int Buffer::writeToFd(int fd) {
 }
 
 void Buffer::shrink() {
-    while (readIndex >= BufferChunkSize) {
+    while (readIndex >= bufferChunkSize) {
         buffer.push_back(buffer.front());
         buffer.pop_front();
-        readIndex -= BufferChunkSize;
-        writeIndex -= BufferChunkSize;
+        readIndex -= bufferChunkSize;
+        writeIndex -= bufferChunkSize;
     }
     if (buffer.size() < 3) {
         return;
     }
-    if ((buffer.size()-2)*BufferChunkSize > writeIndex) {
+    if ((buffer.size()-2)*bufferChunkSize > writeIndex) {
         delete[] buffer.back();
         buffer.pop_back();
     } else {

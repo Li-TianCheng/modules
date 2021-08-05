@@ -11,12 +11,12 @@ void HttpSession::handleReadDone(iter pos, size_t n) {
     readDone(n);
 }
 
-HttpSession::HttpSession() : request(nullptr), status(0), timeout(0) {
+HttpSession::HttpSession(int bufferChunkSize) : request(nullptr), status(0), timeout(0), count(0), TcpSession(bufferChunkSize) {
 
 }
 
 void HttpSession::match(shared_ptr<Http> request) {
-    LOG(Info, "HttpSession request:"+request->line["method"]+" "+request->line["url"]+" "+request->line["version"]);
+    LOG(Access, "HttpSession request:"+request->line["method"]+" "+request->line["url"]+" "+request->line["version"]);
     auto response = ObjPool::allocate<Http>();
     response->line["version"] = request->line["version"];
     response->line["status"] = "404";

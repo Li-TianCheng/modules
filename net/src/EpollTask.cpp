@@ -4,7 +4,7 @@
 
 #include "EpollTask.h"
 
-EpollTask::EpollTask() : running(false), needClose(false), sessionNum(0), waitTime(WaitTime) {
+EpollTask::EpollTask(int epollEventNum) : running(false), needClose(false), sessionNum(0), waitTime(1), epollEventNum(epollEventNum) {
     epollFd = epoll_create(1);
     if (epollFd == -1) {
         throw std::runtime_error("epoll 申请错误");
@@ -241,10 +241,10 @@ void EpollTask::cycleTask(shared_ptr<void> arg) {
     epoll->cycleInit();
     while (!epoll->needClose || epoll->sessionNum != 0 || !epoll->timeToFd.empty()) {
         epoll->cycleNoBlock(-1);
-        epoll_event events[EpollEventNum];
-        int num = epoll_wait(epoll->epollFd, events, EpollEventNum, epoll->waitTime);
+        epoll_event events[epoll->epollEventNum];
+        int num = epoll_wait(epoll->epollFd, events, epoll->epollEventNum, epoll->waitTime);
         if (num == 0) {
-            epoll->waitTime = WaitTime;
+            epoll->waitTime = 1;
         } else {
             epoll->waitTime = 0;
         }

@@ -6,7 +6,8 @@
 
 void TaskSystem::init() {
     getThreadPool();
-    ResourceSystem::registerResource(getThreadPool(), 0, 0, 1, 0);
+    auto time = ConfigSystem::getConfig()["system"]["task_system"]["check_time"];
+    ResourceSystem::registerResource(getThreadPool(), time[0].asInt(), time[1].asInt(), time[2].asInt(), time[3].asInt());
 }
 
 void TaskSystem::close() {
@@ -19,7 +20,10 @@ void TaskSystem::addTask(void (*task)(shared_ptr<void>), shared_ptr<void> arg) {
 }
 
 shared_ptr<ThreadPool> TaskSystem::getThreadPool() {
-    static shared_ptr<ThreadPool> threadPool = ObjPool::allocate<ThreadPool>(InitThreadNum, MaxThreadNum, TaskQueueSize);
+    static shared_ptr<ThreadPool> threadPool = ObjPool::allocate<ThreadPool>(
+            ConfigSystem::getConfig()["system"]["task_system"]["init_thread_num"].asInt(),
+            ConfigSystem::getConfig()["system"]["task_system"]["max_thread_num"].asInt(),
+            ConfigSystem::getConfig()["system"]["task_system"]["increase_task_num"].asInt());
     return threadPool;
 }
 

@@ -5,11 +5,14 @@
 #include "log/include/LogSystem.h"
 
 string LogSystem::path;
+int LogSystem::rank;
 
 void LogSystem::init(const string& path) {
     LogSystem::path = path;
+    LogSystem::rank = ConfigSystem::getConfig()["system"]["log"]["rank"].asInt();
     getLog();
-    ResourceSystem::registerResource(getLog(), 0, 0, 0, 10);
+    auto time = ConfigSystem::getConfig()["system"]["log"]["check_time"];
+    ResourceSystem::registerResource(getLog(), time[0].asInt(), time[1].asInt(), time[2].asInt(), time[3].asInt());
 }
 
 void LogSystem::close() {
@@ -20,8 +23,10 @@ void LogSystem::close() {
     getLog()->file.close();
 }
 
-void LogSystem::log(string &&str) {
-    getLog()->log(std::forward<string>(str));
+void LogSystem::log(LogRank rank, string &&str) {
+    if (rank >= LogSystem::rank) {
+        getLog()->log(logString[rank]+" "+getTime()+" "+std::forward<string>(str));
+    }
 }
 
 shared_ptr<Log> LogSystem::getLog() {

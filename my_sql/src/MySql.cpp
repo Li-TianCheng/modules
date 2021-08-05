@@ -5,8 +5,8 @@
 #include "MySql.h"
 
 MySql::MySql(const string &userName, const string &password, const string &dataBase, const string &host,
-             int port) : userName(userName), password(password),
-             dataBase(dataBase), host(host), port(port), free(nullptr), connNum(0) {
+             int port) : userName(userName), password(password), initConnNum(ConfigSystem::getConfig()["system"]["my_sql"]["init_conn_num"].asInt()),
+             maxConnNum(ConfigSystem::getConfig()["system"]["my_sql"]["max_conn_num"].asInt()), dataBase(dataBase), host(host), port(port), free(nullptr), connNum(0) {
     mysql_library_init;
 }
 
@@ -17,7 +17,8 @@ void MySql::close() {
 
 void MySql::connect() {
     increase();
-    ResourceSystem::registerResource(shared_from_this(), 0, 0, 1, 0);
+    auto time = ConfigSystem::getConfig()["system"]["my_sql"]["check_time"];
+    ResourceSystem::registerResource(shared_from_this(), time[0].asInt(), time[1].asInt(), time[2].asInt(), time[3].asInt());
     LOG(Info, "MySql begin, userName:"+userName);
 }
 
@@ -34,11 +35,11 @@ shared_ptr<Connection> MySql::getConnection() {
 }
 
 void MySql::checkOut() {
-    if (free == nullptr || connNum == InitConnNum) {
+    if (free == nullptr || connNum == initConnNum) {
         return;
     }
     mutex.lock();
-    int target = connNum-std::max(connNum-InitConnNum, InitConnNum);
+    int target = connNum-std::max(connNum-initConnNum, initConnNum);
     for (int i = 0; i < target; i++) {
         if (free == nullptr) {
             break;
@@ -54,11 +55,11 @@ void MySql::checkOut() {
 }
 
 void MySql::increase() {
-    if (free != nullptr || connNum >= MaxConnNum) {
+    if (free != nullptr || connNum >= maxConnNum) {
         return;
     }
     mutex.lock();
-    for (int i = 0; i < InitConnNum; i++) {
+    for (int i = 0; i < initConnNum; i++) {
         auto conn = ObjPool::allocate<Connection>();
         mysql_init(&conn->conn);
         if (mysql_real_connect(&conn->conn, host.data(), userName.data(), password.data(), dataBase.data(), port, nullptr, CLIENT_MULTI_STATEMENTS) == nullptr) {

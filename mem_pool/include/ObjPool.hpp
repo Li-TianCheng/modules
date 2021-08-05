@@ -7,11 +7,10 @@
 
 #include <memory>
 #include "MemPool.h"
+#include "config_system/include/ConfigSystem.h"
 
 using std::shared_ptr;
 using std::static_pointer_cast;
-
-static const int ChunkSize      = 200;
 
 class ObjPool{
 public:
@@ -43,7 +42,7 @@ void ObjPool::deallocate(T* ptr) {
 }
 
 inline MemPool& ObjPool::getInstance() {
-    static MemPool memPool(ChunkSize);
+    static MemPool memPool(ConfigSystem::getConfig()["system"]["obj_pool"]["chunk_size"].asInt());
     return memPool;
 }
 

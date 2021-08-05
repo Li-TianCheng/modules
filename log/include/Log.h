@@ -20,19 +20,21 @@ using std::queue;
 using std::vector;
 
 enum LogRank{
+    Trace,
+    Debug,
     Info,
+    Access,
     Warn,
     Error,
-    Debug,
-    Trace
 };
 
 static const string logString[]{
-    "Info",
-    "Warn",
-    "Error",
+    "Trace",
     "Debug",
-    "Trace"
+    "Info",
+    "Access",
+    "Warn",
+    "Error"
 };
 
 static string getTime() {

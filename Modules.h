@@ -10,17 +10,19 @@
 #include "resource/include/ResourceSystem.h"
 #include "task_system/include/TaskSystem.h"
 #include "log/include/LogSystem.h"
+#include "config_system/include/ConfigSystem.h"
 
 namespace modules {
-    static void init(const string& path="../log/log.log");
+    static void init(const string& path="../config/config.json");
     static void close();
 }
 
 inline void modules::init(const string& path){
+    ConfigSystem::init(path);
     ObjPool::init();
     TimeSystem::init();
     ResourceSystem::init();
-    LogSystem::init(path);
+    LogSystem::init(ConfigSystem::getConfig()["system"]["log"]["path"].asString());
     TaskSystem::init();
 }
 

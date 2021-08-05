@@ -22,12 +22,11 @@
 using std::unordered_map;
 using std::vector;
 
-static const int WaitTime = 1;
 static const int EpollEventNum = 5000;
 
 class EpollTask : public EventSystem {
 public:
-    explicit EpollTask();
+    explicit EpollTask(int epollEventNum);
     bool isRunning();
     void run();
     ~EpollTask() override;
@@ -53,6 +52,7 @@ private:
     std::atomic<int> sessionNum;
     int epollFd;
     int waitTime;
+    int epollEventNum;
     unordered_map<int, shared_ptr<TcpSession>> sessionManager;
     unordered_map<shared_ptr<Time>, int> timeToFd;
 };

@@ -15,7 +15,7 @@ struct Http;
 
 class HttpSession : public TcpSession {
 public:
-    HttpSession();
+    HttpSession(int bufferChunkSize);
     ~HttpSession() override = default;
     void sessionInit() override;
     void sessionClear() override;

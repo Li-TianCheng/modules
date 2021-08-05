@@ -14,8 +14,6 @@
 #include "time_system/include/Time.h"
 #include "time_system/include/TimeSystem.h"
 
-static const int AppendSize = 1024;
-
 struct Msg {
     int type;
     size_t offset;
@@ -40,7 +38,7 @@ struct Msg {
 
 class TcpSession: public std::enable_shared_from_this<TcpSession> {
 public:
-    TcpSession();
+    explicit TcpSession(int bufferChunkSize);
     void write(shared_ptr<vector<char>> sendMsg, size_t offset=0, size_t end=-1);
     void write(shared_ptr<vector<unsigned char>> sendMsg, size_t offset=0, size_t end=-1);
     void write(shared_ptr<string> sendMsg, size_t offset=0, size_t end=-1);

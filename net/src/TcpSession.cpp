@@ -4,7 +4,7 @@
 
 #include "TcpSession.h"
 
-TcpSession::TcpSession() : isCloseConnection(false), isWrite(false), isRead(false), isWriteDone(true) {
+TcpSession::TcpSession(int bufferChunkSize) : isCloseConnection(false), isWrite(false), isRead(false), isWriteDone(true), readBuffer(bufferChunkSize) {
     len = sizeof(address);
 }
 
@@ -12,12 +12,14 @@ void TcpSession::write(shared_ptr<vector<char>> sendMsg, size_t offset, size_t e
     if (isCloseConnection || sendMsg == nullptr || (*sendMsg).empty() || offset >= sendMsg->size()) {
         return;
     }
-    isWriteDone = false;
     mutex.lock();
     msgQueue.emplace_back(sendMsg, offset, end);
-    epollEvent.events |= Write;
+    if (isWriteDone) {
+        epollEvent.events |= Write;
+        epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent);
+    }
+    isWriteDone = false;
     mutex.unlock();
-    epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent);
 }
 
 void TcpSession::write(shared_ptr<vector<unsigned char>> sendMsg, size_t offset, size_t end) {

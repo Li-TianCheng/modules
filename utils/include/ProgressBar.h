@@ -12,7 +12,6 @@
 
 using namespace std;
 
-
 class ProgressBar : public Resource{
 public:
     ProgressBar(const string& title, int num);
