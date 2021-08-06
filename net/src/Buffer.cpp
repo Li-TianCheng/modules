@@ -48,7 +48,6 @@ int Buffer::readFromFd(int fd) {
             if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
                 return 0;
             } else {
-                std::cout << errno << std::endl;
                 return -1;
             }
         }

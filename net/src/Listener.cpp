@@ -19,7 +19,7 @@ void Listener::registerListener(int port, AddressType addressType, shared_ptr<Tc
     server->addressType = addressType;
     server->port = port;
     server->listener = shared_from_this();
-    int serverFd = socket(addressType, SOCK_STREAM, 0);
+    int serverFd = socket(addressType, SOCK_STREAM|SOCK_CLOEXEC, 0);
     server->serverFd = serverFd;
     int reuse = 1;
     setsockopt(serverFd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));

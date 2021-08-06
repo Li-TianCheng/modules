@@ -47,6 +47,7 @@ void EpollTask::addNewSession(shared_ptr<TcpSession> session) {
     int fd = session->epollEvent.data.fd;
     int flags = fcntl(fd, 0);
     fcntl(fd, F_SETFL, flags|O_NONBLOCK);
+    fcntl(fd, F_SETFD, FD_CLOEXEC);
     session->epollFd = epollFd;
     session->epollEvent.events = Read|Err|Hup|RdHup|Et|OneShot;
     session->sessionInit();

@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <string>
+#include <cstring>
 #include <fstream>
 #include <jsoncpp/json/json.h>
 
@@ -16,6 +17,7 @@ class ConfigSystem {
 public:
     static void init(const string& path);
     static Json::Value& getConfig();
+    static char* path;
 private:
     ConfigSystem() = default;
 };
