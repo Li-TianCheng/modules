@@ -27,7 +27,6 @@ private:
     void parse(const char& c);
     string getGMTTime();
 private:
-    shared_ptr<Ping> ping;
     shared_ptr<Http> request;
     string key;
     int count;

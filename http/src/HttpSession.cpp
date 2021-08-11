@@ -151,8 +151,6 @@ string HttpSession::getGMTTime() {
 }
 
 void HttpSession::sessionInit() {
-    ping = ObjPool::allocate<Ping>(*(sockaddr_in*)&address);
-    ping->send();
     uuid = addTicker(0, 0, 1, 0);
 }
 
@@ -163,11 +161,10 @@ void HttpSession::sessionClear() {
 void HttpSession::handleTickerTimeOut(const string &uuid) {
     if (this->uuid == uuid) {
         timeout++;
-        if (!ping->recv() || timeout > 30) {
+        if (timeout > 30) {
             deleteSession();
             return;
         }
-        ping->send();
     }
 }
 
