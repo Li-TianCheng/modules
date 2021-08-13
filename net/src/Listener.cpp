@@ -12,7 +12,9 @@ Listener::Listener() : waitTime(-1), waitCLose(nullptr), checkTime(ConfigSystem:
     if (epollFd == -1) {
         throw std::runtime_error("epoll 申请错误");
     }
-    registerEvent(EventCloseListen, handleCloseListen);
+    registerEvent(EventCloseListener, handleCloseListener);
+    registerEvent(EventAddSession, handleAddSession);
+    registerEvent(EventAddListener, handleAddListener);
 }
 
 void Listener::registerListener(int port, AddressType addressType, shared_ptr<TcpServerBase> server) {
@@ -111,7 +113,7 @@ void Listener::cycleInit() {
     e->run();
 }
 
-void Listener::handleCloseListen(shared_ptr<void> arg) {
+void Listener::handleCloseListener(shared_ptr<void> arg) {
     auto server = static_pointer_cast<TcpServerBase>(arg);
     auto listener = static_pointer_cast<Listener>(server->listener);
     epoll_ctl(listener->epollFd, EPOLL_CTL_DEL, server->serverFd, &server->epollEvent);
@@ -187,4 +189,46 @@ void Listener::addNewSession(shared_ptr<TcpSession> session) {
             waitCLose = minIter;
         }
     }
+}
+
+void Listener::handleAddListener(shared_ptr<void> arg) {
+    auto _arg = static_pointer_cast<addListenerArg>(arg);
+    _arg->listener->registerListener(_arg->port, _arg->addressType, _arg->server);
+    int err = ::listen(_arg->server->serverFd, ConfigSystem::getConfig()["system"]["net"]["listener"]["listen_num"].asInt());
+    if (err == -1){
+        ::close(_arg->server->serverFd);
+        return;
+    }
+    LOG(Info, "port:"+std::to_string(_arg->port)+" listen begin");
+}
+
+void Listener::handleAddSession(shared_ptr<void> arg) {
+    auto _arg = static_pointer_cast<addNewSessionArg>(arg);
+    auto session = _arg->session;
+    vector<string> split = utils::split(_arg->address, ':');
+    session->epollEvent.data.fd = socket(_arg->addressType, SOCK_STREAM, 0);
+    bzero(&session->address, sizeof(session->address));
+    if (_arg->addressType == IPV4) {
+        ((sockaddr_in*)(&session->address))->sin_family = PF_INET;
+        if ((inet_addr(split[0].data())) == INADDR_NONE) {
+            hostent* host = gethostbyname(split[0].data());
+            if (host == nullptr) {
+                return;
+            }
+            ((sockaddr_in*)(&session->address))->sin_addr = *(in_addr*)host->h_addr;
+        } else {
+            inet_pton(PF_INET, split[0].data(), &((sockaddr_in*)(&session->address))->sin_addr);
+        }
+        ((sockaddr_in*)(&session->address))->sin_port = htons(std::stoi(split[1]));
+    } else {
+        ((sockaddr_in6*)(&session->address))->sin6_family = PF_INET6;
+        inet_pton(PF_INET6, split[0].data(), &((sockaddr_in6*)(&session->address))->sin6_addr);
+        ((sockaddr_in6*)(&session->address))->sin6_port = htons(std::stoi(split[1]));
+        // TODO IPV6
+    }
+    int err = ::connect(session->epollEvent.data.fd, &session->address, sizeof(session->address));
+    if (err == -1) {
+        return;
+    }
+    _arg->listener->addNewSession(session);
 }

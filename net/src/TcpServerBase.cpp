@@ -5,7 +5,7 @@
 #include "TcpServerBase.h"
 
 void TcpServerBase::close() {
-    auto e = ObjPool::allocate<Event>(EventCloseListen, shared_from_this());
+    auto e = ObjPool::allocate<Event>(EventCloseListener, shared_from_this());
     listener->receiveEvent(e);
 }
 

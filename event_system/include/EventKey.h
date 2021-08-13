@@ -19,7 +19,8 @@ enum EventKey{
     EventRegisterResource,
     EventUnregisterResource,
     EventCloseConnection,
-    EventCloseListen
+    EventCloseListener,
+    EventAddListener
 };
 
 

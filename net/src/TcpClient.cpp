@@ -3,7 +3,6 @@
 //
 
 #include "TcpClient.h"
-#include <iostream>
 
 TcpClient::TcpClient(const string &address, AddressType addressType) {
     vector<string> split = utils::split(address, ':');

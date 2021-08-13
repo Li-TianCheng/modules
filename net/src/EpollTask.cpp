@@ -30,7 +30,7 @@ void EpollTask::init() {
     registerEvent(EventEndCycle, nullptr);
     registerEvent(EventTickerTimeOut, handleTickerTimeOut);
     registerEvent(EventTimerTimeOut, handleTimerTimeOut);
-    registerEvent(EventCloseListen, handleCloseListen);
+    registerEvent(EventCloseListener, handleCloseListen);
     registerEvent(EventCloseConnection, handleCloseConnection);
     registerEvent(EventTicker, handleTicker);
     registerEvent(EventTimer, handleTimer);

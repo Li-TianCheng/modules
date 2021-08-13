@@ -53,7 +53,7 @@ void TcpSession::closeConnection() {
 }
 
 void TcpSession::closeListen() {
-    auto e = ObjPool::allocate<Event>(EventCloseListen, shared_from_this());
+    auto e = ObjPool::allocate<Event>(EventCloseListener, shared_from_this());
     epoll->receiveEvent(e);
 }
 

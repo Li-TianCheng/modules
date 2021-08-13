@@ -12,6 +12,9 @@
 #include <cstring>
 #include <unistd.h>
 #include <malloc.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <arpa/inet.h>
 #include "EpollEventType.h"
 #include "AddressType.h"
 #include "TcpServerBase.h"
@@ -20,6 +23,7 @@
 #include "AddressType.h"
 #include "EpollTask.h"
 #include "TcpSession.h"
+#include "utils/include/StringUtils.h"
 
 class Listener: public EventSystem {
 public:
@@ -28,7 +32,9 @@ public:
     void listen();
     ~Listener() override;
 private:
-    static void handleCloseListen(shared_ptr<void> arg);
+    static void handleCloseListener(shared_ptr<void> arg);
+    static void handleAddListener(shared_ptr<void> arg);
+    static void handleAddSession(shared_ptr<void> arg);
     void cycleInit() override;
     void addNewSession(shared_ptr<TcpSession> session);
 private:
@@ -42,6 +48,19 @@ private:
     shared_ptr<EpollTask> waitCLose;
 };
 
+struct addListenerArg {
+    shared_ptr<Listener> listener;
+    int port;
+    AddressType addressType;
+    shared_ptr<TcpServerBase> server;
+};
+
+struct addNewSessionArg {
+    shared_ptr<Listener> listener;
+    string address;
+    AddressType addressType;
+    shared_ptr<TcpSession> session;
+};
 
 
 #endif //NET_LISTENER_H
