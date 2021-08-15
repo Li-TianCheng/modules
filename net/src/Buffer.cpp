@@ -3,7 +3,7 @@
 //
 
 #include "net/include/Buffer.h"
-#include <iostream>
+
 
 Buffer::Buffer(int bufferChunkSize) : bufferChunkSize(bufferChunkSize), buffer(1), readIndex(0), writeIndex(0) {
     buffer[0] = new char[bufferChunkSize];
@@ -98,5 +98,41 @@ void Buffer::shrink() {
 Buffer::~Buffer() {
     for (auto& c : buffer) {
         delete[] c;
+    }
+}
+
+void Buffer::copy(const iter &begin, size_t n, string& buff) {
+    size_t total = 0;
+    size_t curr = begin.readIndex;
+    while (total < n) {
+        size_t remaining = bufferChunkSize - curr % bufferChunkSize;
+        size_t inc = remaining < n-total ? remaining : n-total;
+        buff.insert(buff.end(), buffer[curr/bufferChunkSize]+(curr%bufferChunkSize), buffer[curr/bufferChunkSize]+(curr%bufferChunkSize)+inc);
+        total += inc;
+        curr += inc;
+    }
+}
+
+void Buffer::copy(const iter &begin, size_t n, vector<char>& buff) {
+    size_t total = 0;
+    size_t curr = begin.readIndex;
+    while (total < n) {
+        size_t remaining = bufferChunkSize - curr % bufferChunkSize;
+        size_t inc = remaining < n-total ? remaining : n-total;
+        buff.insert(buff.end(), buffer[curr/bufferChunkSize]+(curr%bufferChunkSize), buffer[curr/bufferChunkSize]+(curr%bufferChunkSize)+inc);
+        total += inc;
+        curr += inc;
+    }
+}
+
+void Buffer::copy(const iter &begin, size_t n, vector<unsigned char>& buff) {
+    size_t total = 0;
+    size_t curr = begin.readIndex;
+    while (total < n) {
+        size_t remaining = bufferChunkSize - curr % bufferChunkSize;
+        size_t inc = remaining < n-total ? remaining : n-total;
+        buff.insert(buff.end(), buffer[curr/bufferChunkSize]+(curr%bufferChunkSize), buffer[curr/bufferChunkSize]+(curr%bufferChunkSize)+inc);
+        total += inc;
+        curr += inc;
     }
 }

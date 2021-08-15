@@ -8,8 +8,14 @@
 #include <deque>
 #include <cerrno>
 #include <sys/socket.h>
+#include <string>
+#include <memory>
+#include <vector>
 
 using std::deque;
+using std::string;
+using std::vector;
+using std::shared_ptr;
 
 struct iter;
 
@@ -19,6 +25,9 @@ public:
     iter getReadPos();
     size_t getMsgNum();
     void write(const char* c, size_t n);
+    void copy(const iter& begin, size_t n, string& buff);
+    void copy(const iter& begin, size_t n, vector<char>& buff);
+    void copy(const iter& begin, size_t n, vector<unsigned char>& buff);
     void readDone(size_t n);
     int readFromFd(int fd);
     int writeToFd(int fd);
@@ -81,6 +90,7 @@ public:
         return (*buffer)[readIndex/bufferChunkSize][readIndex % bufferChunkSize];
     }
 private:
+    friend class Buffer;
     deque<char*>* buffer;
     size_t readIndex;
     int bufferChunkSize;

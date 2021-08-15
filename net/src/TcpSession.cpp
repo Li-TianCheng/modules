@@ -102,3 +102,15 @@ void TcpSession::readDone(size_t n) {
     readBuffer.readDone(n);
 }
 
+void TcpSession::copy(const iter &begin, size_t n, string& buff) {
+    readBuffer.copy(begin, n, buff);
+}
+
+void TcpSession::copy(const iter &begin, size_t n, vector<char>& buff) {
+    readBuffer.copy(begin, n, buff);
+}
+
+void TcpSession::copy(const iter &begin, size_t n, vector<unsigned char>& buff) {
+    readBuffer.copy(begin, n, buff);
+}
+

@@ -42,6 +42,9 @@ public:
     void write(shared_ptr<vector<char>> sendMsg, size_t offset=0, size_t end=-1);
     void write(shared_ptr<vector<unsigned char>> sendMsg, size_t offset=0, size_t end=-1);
     void write(shared_ptr<string> sendMsg, size_t offset=0, size_t end=-1);
+    void copy(const iter& begin, size_t n, string& buff);
+    void copy(const iter& begin, size_t n, vector<char>& buff);
+    void copy(const iter& begin, size_t n, vector<unsigned char>& buff);
     void closeConnection();
     void closeListen();
     void deleteSession();
