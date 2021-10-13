@@ -31,6 +31,7 @@ shared_ptr<Connection> MySql::getConnection() {
     shared_ptr<Connection> conn = free;
     free = free->next;
     condition.notify(mutex);
+	mysql_ping(&conn->conn);
     return conn;
 }
 
@@ -62,6 +63,8 @@ void MySql::increase() {
     for (int i = 0; i < initConnNum; i++) {
         auto conn = ObjPool::allocate<Connection>();
         mysql_init(&conn->conn);
+		bool flag = true;
+	    mysql_options(&conn->conn, MYSQL_OPT_RECONNECT, &flag);
         if (mysql_real_connect(&conn->conn, host.data(), userName.data(), password.data(), dataBase.data(), port, nullptr, CLIENT_MULTI_STATEMENTS) == nullptr) {
             std::cerr << mysql_error(&conn->conn) << std::endl;
             mysql_close(&conn->conn);
@@ -87,7 +90,7 @@ bool MySql::executeSQL(const string &sql) {
     if (mysql_real_query(&conn->conn, sql.data(), sql.size()) != 0) {
         std::cerr << mysql_error(&conn->conn) << std::endl;
         freeConnection(conn);
-        LOG(Info, "executeSQL failed["+sql+"]");
+        LOG(Warn, "executeSQL failed["+sql+"]");
         return false;
     }
     while (true) {
@@ -122,8 +125,8 @@ vector<vector<unordered_map<string, string>>> MySql::queryData(const string &sql
     if (mysql_real_query(&conn->conn, sql.data(), sql.size()) != 0) {
         std::cerr << mysql_error(&conn->conn) << std::endl;
         freeConnection(conn);
-        LOG(Info, "queryData failed["+sql+"]");
-        return vector<vector<unordered_map<string, string>>>();
+        LOG(Warn, "queryData failed["+sql+"]");
+        return {};
     }
     vector<vector<unordered_map<string, string>>> result;
     while (true) {

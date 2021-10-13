@@ -67,6 +67,7 @@ protected:
     std::atomic<bool> isCloseConnection;
     std::atomic<bool> isWrite;
     std::atomic<bool> isRead;
+    std::atomic<bool> isClose;
     std::atomic<bool> isWriteDone;
     deque<Msg> msgQueue;
     Mutex mutex;

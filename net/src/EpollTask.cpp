@@ -54,7 +54,7 @@ void EpollTask::addNewSession(shared_ptr<TcpSession> session) {
     sessionManager[fd] = session;
     epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &session->epollEvent);
     std::ostringstream log;
-    log << "EpollTask[" << this << "] addNewSession[" << session << "]";
+    log << "EpollTask[" << this << "] addNewSession[" << session << "] fd[" << fd << "]";
     LOG(Info, log.str());
 }
 
@@ -63,14 +63,15 @@ void EpollTask::deleteSession(int fd) {
         epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &sessionManager[fd]->epollEvent);
         auto session = sessionManager[fd];
         session->sessionClear();
+		session->isClose = true;
         sessionManager.erase(fd);
         sessionNum--;
+	    ::shutdown(fd, SHUT_RDWR);
+	    ::close(fd);
         std::ostringstream log;
-        log << "EpollTask[" << this << "] deleteSession[" << session << "]";
+        log << "EpollTask[" << this << "] deleteSession[" << session << "] fd[" << fd << "]";
         LOG(Info, log.str());
     }
-    ::shutdown(fd, SHUT_RDWR);
-    ::close(fd);
 }
 
 void EpollTask::handleTickerTimeOut(shared_ptr<void> arg) {
@@ -146,10 +147,8 @@ void EpollTask::readTask(shared_ptr<void> arg) {
     LOG(Info, log.str());
     int res = session->readBuffer.readFromFd(session->epollEvent.data.fd);
     if (res == -1) {
-        auto epoll = static_pointer_cast<EpollTask>(session->epoll);
-        auto e = ObjPool::allocate<Event>(EventDeleteSession, session);
-        epoll->receiveEvent(e);
         session->isRead = false;
+	    epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
         std::ostringstream log;
         log << "session[" << session << "] readTask failed";
         LOG(Warn, log.str());
@@ -205,10 +204,8 @@ void EpollTask::writeTask(shared_ptr<void> arg) {
                     LOG(Info, log.str());
                     return;
                 } else {
-                    auto epoll = static_pointer_cast<EpollTask>(session->epoll);
-                    auto e = ObjPool::allocate<Event>(EventDeleteSession, session);
-                    epoll->receiveEvent(e);
                     session->isWrite = false;
+	                epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
                     std::ostringstream log;
                     log << "session[" << session << "] writeTask failed";
                     LOG(Warn, log.str());
@@ -244,7 +241,7 @@ void EpollTask::cycleTask(shared_ptr<void> arg) {
         epoll->cycleNoBlock(-1);
         epoll_event events[epoll->epollEventNum];
         int num = epoll_wait(epoll->epollFd, events, epoll->epollEventNum, epoll->waitTime);
-        if (num == 0) {
+        if (num <= 0) {
             epoll->waitTime = 1;
         } else {
             epoll->waitTime = 0;
@@ -285,7 +282,7 @@ void EpollTask::cycleTask(shared_ptr<void> arg) {
 
 void EpollTask::handleCloseConnection(shared_ptr<void> arg) {
     auto session = static_pointer_cast<TcpSession>(arg);
-    if (session->isWriteDone) {
+    if (!session->isClose && session->isWriteDone) {
         static_pointer_cast<EpollTask>(session->epoll)->deleteSession(session->epollEvent.data.fd);
     }
 }
@@ -297,5 +294,7 @@ void EpollTask::handleCloseListen(shared_ptr<void> arg) {
 
 void EpollTask::handleDeleteSession(shared_ptr<void> arg) {
     auto session = static_pointer_cast<TcpSession>(arg);
-    static_pointer_cast<EpollTask>(session->epoll)->deleteSession(session->epollEvent.data.fd);
+	if (!session->isClose) {
+		static_pointer_cast<EpollTask>(session->epoll)->deleteSession(session->epollEvent.data.fd);
+	}
 }

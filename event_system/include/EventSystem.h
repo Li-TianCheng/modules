@@ -7,7 +7,7 @@
 
 #include <unordered_map>
 #include <string>
-#include <queue>
+#include <deque>
 #include <atomic>
 #include "mem_pool/include/ObjPool.hpp"
 #include "my_pthread/include/Condition.h"
@@ -15,7 +15,7 @@
 
 using std::unordered_map;
 using std::string;
-using std::queue;
+using std::deque;
 
 class EventSystem;
 
@@ -31,6 +31,7 @@ public:
     void registerEvent(EventKey eventType, void (*handleEvent)(shared_ptr<void>));
     void unregisterEvent(EventKey eventType);
     void receiveEvent(shared_ptr<Event> e);
+	void receivePriorityEvent(shared_ptr<Event> e);
     void doEvent(shared_ptr<Event> e);
     shared_ptr<Event> getEvent();
     void cycle();
@@ -46,7 +47,7 @@ public:
 private:
     std::atomic<bool> shutdown;
     unordered_map<EventKey, void(*)(shared_ptr<void> )> map;
-    queue<shared_ptr<Event>> eventQueue;
+    deque<shared_ptr<Event>> eventQueue;
     Mutex mutex;
     Condition condition;
 };

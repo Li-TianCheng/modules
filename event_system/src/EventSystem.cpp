@@ -17,8 +17,17 @@ void EventSystem::receiveEvent(shared_ptr<Event> e) {
         return;
     }
     mutex.lock();
-    eventQueue.push(e);
+    eventQueue.push_back(e);
     condition.notify(mutex);
+}
+
+void EventSystem::receivePriorityEvent(shared_ptr<Event> e) {
+	if (shutdown){
+		return;
+	}
+	mutex.lock();
+	eventQueue.push_front(e);
+	condition.notify(mutex);
 }
 
 void EventSystem::doEvent(shared_ptr<Event> e) {
@@ -38,7 +47,7 @@ shared_ptr<Event> EventSystem::getEvent() {
         condition.wait(mutex);
     }
     shared_ptr<Event> e = eventQueue.front();
-    eventQueue.pop();
+    eventQueue.pop_front();
     condition.notify(mutex);
     return e;
 }
@@ -62,7 +71,7 @@ void EventSystem::cycleInit() {}
 void EventSystem::cycleClear() {
     shutdown = true;
     while (!eventQueue.empty()) {
-        eventQueue.pop();
+        eventQueue.pop_front();
     }
 }
 
@@ -81,7 +90,7 @@ void EventSystem::cycleNoBlock(int maxNum) {
     while (!eventQueue.empty() && (maxNum < 0 || temp.size() < maxNum)) {
         shared_ptr<Event> e = eventQueue.front();
         temp.push_back(e);
-        eventQueue.pop();
+        eventQueue.pop_front();
     }
     mutex.unlock();
     for (auto e : temp) {

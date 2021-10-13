@@ -9,10 +9,12 @@
 #include <unordered_set>
 #include <unistd.h>
 #include <sys/epoll.h>
+#include <queue>
 #include "event_system/include/EventSystem.h"
 #include "Time.h"
 
 using std::vector;
+using std::queue;
 using std::unordered_set;
 
 class TimeWheel: public EventSystem {

@@ -4,7 +4,7 @@
 
 #include "TcpSession.h"
 
-TcpSession::TcpSession(int bufferChunkSize) : isCloseConnection(false), isWrite(false), isRead(false), isWriteDone(true), readBuffer(bufferChunkSize) {
+TcpSession::TcpSession(int bufferChunkSize) : isCloseConnection(false), isWrite(false), isRead(false), isClose(false), isWriteDone(true), readBuffer(bufferChunkSize) {
     len = sizeof(address);
 }
 
