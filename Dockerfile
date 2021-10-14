@@ -5,4 +5,5 @@ RUN apt-get update \
     && apt-get install cmake -y \
     && apt-get install libjsoncpp-dev -y \
     && apt-get install libmysqlclient-dev -y \
+    && apt-get install libhiredis-dev -y \
     && apt-get install uuid-dev -y

@@ -8,6 +8,11 @@
       "max_conn_num": 100,
       "check_time": [0, 0, 1, 0]
     },
+    "redis": {
+      "init_conn_num": 10,
+      "max_conn_num": 100,
+      "check_time": [0, 0, 1, 0]
+    },
     "net": {
       "read_buffer_chunk_size": 16384,
       "listener": {

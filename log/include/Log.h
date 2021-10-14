@@ -53,6 +53,7 @@ class Log : public Resource {
 public:
     explicit Log(const string& path);
     void log(string&& log);
+	~Log() override = default;
 private:
     void checkOut() override;
     friend class LogSystem;

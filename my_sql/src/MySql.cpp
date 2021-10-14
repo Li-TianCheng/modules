@@ -66,7 +66,7 @@ void MySql::increase() {
 		bool flag = true;
 	    mysql_options(&conn->conn, MYSQL_OPT_RECONNECT, &flag);
         if (mysql_real_connect(&conn->conn, host.data(), userName.data(), password.data(), dataBase.data(), port, nullptr, CLIENT_MULTI_STATEMENTS) == nullptr) {
-            std::cerr << mysql_error(&conn->conn) << std::endl;
+	        LOG(Error, "MySql create connect failed["+string(mysql_error(&conn->conn))+"]");
             mysql_close(&conn->conn);
             throw std::runtime_error("数据库连接创建失败");
         }
@@ -88,9 +88,8 @@ void MySql::freeConnection(shared_ptr<Connection> conn) {
 bool MySql::executeSQL(const string &sql) {
     shared_ptr<Connection> conn = getConnection();
     if (mysql_real_query(&conn->conn, sql.data(), sql.size()) != 0) {
-        std::cerr << mysql_error(&conn->conn) << std::endl;
         freeConnection(conn);
-        LOG(Warn, "executeSQL failed["+sql+"]");
+        LOG(Warn, "executeSQL failed["+sql+"] reason["+string(mysql_error(&conn->conn))+"]");
         return false;
     }
     while (true) {
@@ -123,9 +122,8 @@ MySql::~MySql() {
 vector<vector<unordered_map<string, string>>> MySql::queryData(const string &sql) {
     shared_ptr<Connection> conn = getConnection();
     if (mysql_real_query(&conn->conn, sql.data(), sql.size()) != 0) {
-        std::cerr << mysql_error(&conn->conn) << std::endl;
         freeConnection(conn);
-        LOG(Warn, "queryData failed["+sql+"]");
+        LOG(Warn, "queryData failed["+sql+"] reason["+string(mysql_error(&conn->conn))+"]");
         return {};
     }
     vector<vector<unordered_map<string, string>>> result;

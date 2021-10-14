@@ -18,6 +18,7 @@ public:
     void start();
     void done();
     void stop();
+	~ProgressBar() override = default;
 private:
     void checkOut() override;
 private:

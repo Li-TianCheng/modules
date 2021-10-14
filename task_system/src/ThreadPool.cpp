@@ -16,7 +16,7 @@ ThreadPool::ThreadPool(int initNum, int maxNum, int queueSize): initNum(initNum)
 
 void ThreadPool::addTask(void (*task)(shared_ptr<void>), shared_ptr<void> arg) {
     if (shutdown > 0){
-        std::cerr << "线程池正在关闭" << std::endl;
+		LOG(Error, "ThreadPool is closing");
         return;
     }
     mutex.lock();
@@ -29,7 +29,7 @@ void ThreadPool::addTask(void (*task)(shared_ptr<void>), shared_ptr<void> arg) {
 
 void ThreadPool::addPriorityTask(void (*task)(shared_ptr<void> arg), shared_ptr<void> arg) {
     if (shutdown > 0){
-        std::cerr << "线程池正在关闭" << std::endl;
+	    LOG(Error, "ThreadPool is closing");
         return;
     }
     mutex.lock();

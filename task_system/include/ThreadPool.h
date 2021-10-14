@@ -35,7 +35,7 @@ public:
     ThreadPool(ThreadPool&&) = delete;
     ThreadPool& operator=(const ThreadPool&) = delete;
     ThreadPool& operator=(ThreadPool&&) = delete;
-    ~ThreadPool();
+    ~ThreadPool() override;
 private:
     void increase() override;
     void checkOut() override;

@@ -8,16 +8,13 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
-#include <queue>
 #include <mysql/mysql.h>
 #include "resource/include/ResourceSystem.h"
 #include "time_system/include/TimeSystem.h"
-#include "task_system/include/TaskSystem.h"
 #include "log/include/LogSystem.h"
 #include "config_system/include/ConfigSystem.h"
 
 using std::string;
-using std::queue;
 using std::vector;
 using std::unordered_map;
 
@@ -33,7 +30,7 @@ public:
     void close();
     bool executeSQL(const string& sql);
     vector<vector<unordered_map<string, string>>> queryData(const string& sql);
-    ~MySql();
+    ~MySql() override;
 private:
     shared_ptr<Connection> getConnection();
     void freeConnection(shared_ptr<Connection> conn);

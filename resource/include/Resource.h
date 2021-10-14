@@ -12,6 +12,7 @@ public:
     virtual void increase();
     virtual void decrease();
     virtual void checkOut();
+	virtual ~Resource() = default;
 };
 
 
