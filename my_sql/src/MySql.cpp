@@ -68,7 +68,7 @@ void MySql::increase() {
         if (mysql_real_connect(&conn->conn, host.data(), userName.data(), password.data(), dataBase.data(), port, nullptr, CLIENT_MULTI_STATEMENTS) == nullptr) {
 	        LOG(Error, "MySql create connect failed["+string(mysql_error(&conn->conn))+"]");
             mysql_close(&conn->conn);
-            throw std::runtime_error("数据库连接创建失败");
+            break;
         }
         conn->next = free;
         free = conn;
@@ -85,13 +85,14 @@ void MySql::freeConnection(shared_ptr<Connection> conn) {
     condition.notify(mutex);
 }
 
-bool MySql::executeSQL(const string &sql) {
+unsigned long long MySql::executeSQL(const string &sql) {
     shared_ptr<Connection> conn = getConnection();
     if (mysql_real_query(&conn->conn, sql.data(), sql.size()) != 0) {
         freeConnection(conn);
         LOG(Warn, "executeSQL failed["+sql+"] reason["+string(mysql_error(&conn->conn))+"]");
-        return false;
+        return 0;
     }
+	unsigned long long result = mysql_affected_rows(&conn->conn);
     while (true) {
         MYSQL_RES* re = mysql_store_result(&conn->conn);
         mysql_free_result(re);
@@ -101,7 +102,7 @@ bool MySql::executeSQL(const string &sql) {
     }
     freeConnection(conn);
     LOG(Info, "executeSQL success["+sql+"]");
-    return true;
+    return result;
 }
 
 MySql::~MySql() {

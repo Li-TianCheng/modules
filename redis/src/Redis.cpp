@@ -56,10 +56,10 @@ void Redis::increase() {
 		conn->conn = redisConnect(host.data(), port);
 		if (conn->conn->err != 0) {
 			LOG(Error, "Redis create connect failed["+string(conn->conn->errstr)+"]");
-			throw std::runtime_error("Redis连接创建失败");
+			break;
 		} else if (conn->conn == nullptr) {
 			LOG(Error, "Redis create connect failed[Can't allocate redis connect]");
-			throw std::runtime_error("Redis连接创建失败");
+			break;
 		}
 		conn->next = free;
 		free = conn;

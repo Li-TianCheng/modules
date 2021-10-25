@@ -28,7 +28,7 @@ public:
     MySql(const string &userName, const string &password, const string &dataBase, const string& host="localhost", int port=3306);
     void connect();
     void close();
-    bool executeSQL(const string& sql);
+	unsigned long long executeSQL(const string& sql);
     vector<vector<unordered_map<string, string>>> queryData(const string& sql);
     ~MySql() override;
 private:

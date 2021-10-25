@@ -42,7 +42,7 @@ static string getTime() {
     gettimeofday(&curTime, nullptr);
     char buffer[80] = {0};
     tm nowTime;
-    localtime_r(&curTime.tv_sec, &nowTime);//把得到的值存入临时分配的内存中，线程安全
+    localtime_r(&curTime.tv_sec, &nowTime);
     strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &nowTime);
     char currentTime[84] = {0};
     snprintf(currentTime, sizeof(currentTime), "%s:%ld", buffer, curTime.tv_usec);
