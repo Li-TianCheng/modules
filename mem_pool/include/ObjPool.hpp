@@ -17,7 +17,6 @@ public:
     template<typename T, typename... Args>
     static shared_ptr<T> allocate(Args... args);
     static void init();
-    static void close();
     ObjPool() = delete;
     ObjPool(const ObjPool&) = delete;
     ObjPool(ObjPool&&) = delete;
@@ -45,8 +44,6 @@ inline MemPool& ObjPool::getInstance() {
     static MemPool memPool(ConfigSystem::getConfig()["system"]["obj_pool"]["chunk_size"].asInt());
     return memPool;
 }
-
-inline void ObjPool::close() {}
 
 inline void ObjPool::init() {
     getInstance();

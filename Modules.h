@@ -31,7 +31,6 @@ inline void modules::close(){
     LogSystem::close();
     ResourceSystem::close();
     TimeSystem::close();
-    ObjPool::close();
 }
 
 #endif //MODULES_MODULES_H

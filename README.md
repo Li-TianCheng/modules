@@ -19,11 +19,14 @@
 * 事件系统会在cycle中从eventQueue取出事件,并执行相应handle
 ##### [pthread封装](https://github.com/Li-TianCheng/LibPthread)
 ##### 对象池
-* 对[内存池](https://github.com/Li-TianCheng/MemPool) 的简单封装
-##### 任务系统
+* 对[内存池](https://github.com/Li-TianCheng/MemPool) 的简单封装,返回共享指针
+##### 资源系统
 * 继承事件系统
+* 可对注册的资源进行increase,decrease,checkout操作
+##### 任务系统
+* 继承Resource,注册在资源系统中
 * 当taskQueue满时,会发送一个扩容事件
-* 向时间系统添加一个1s的循环定时事件,当事件触发时,进行缩容
+* 向资源系统添加一个循环定时事件,当事件触发时,进行缩容
 * 扩容策略：当线程池中线程全都在执行任务时,扩容initNum个,但threadNum不能大于MaxNum
 * 缩容策略：当taskQueue为空时,缩容initNum个,但threadNum不能小于initNum,且只取消阻塞的线程
 ##### 时间系统
@@ -32,7 +35,34 @@
 * 利用时间轮的方式进行定时
 * 利用epoll进行定时,来推动时间轮
 * 当相应的定时器过期时,会向事件添加者发送事件
-##### 运行时图示
+##### 配置系统
+* 全局唯一配置,读取指定路径json文件
+##### 日志系统
+* 异步日志系统
+* 继承Resource,注册在资源系统中
+* 资源系统定时将日志输出
+##### my_sql
+* 继承Resource,注册在资源系统中
+* 含有连接池
+* 资源系统对连接池进行扩缩容
+##### redis
+* 继承Resource,注册在资源系统中
+* 含有连接池
+* 资源系统对连接池进行扩缩容
+##### net
+* TCP网络库
+* EpollTask承载连接的epoll,继承事件系统,可接受自定义事件和epoll事件,运行在任务系统中
+* listener使用epoll实现的监听器,可监听多个端口,可动态监听关闭端口,继承事件系统
+* listener可将连接动态的分配到EpollTask上,保持负载均衡,并可对EpollTask进行扩缩容
+* 可自定义Session继承TcpSession,利用模板参数生成TCP服务TcpServer&lt;Session&gt; ,将TcpServer&lt;Session&gt;注册到listener,并开启监听即可实现自定义Tcp服务
+##### http
+* 根据网络库,实现的http服务
+##### utils
+* 常用小工具
+* 序列化
+* 进度条
+* 字符串工具
+##### 启动时图示
 ![](https://github.com/Li-TianCheng/modules/blob/main/modules.png)
 ### 用法
 1. 在main开始时调用modules::init使各个模块初始化
