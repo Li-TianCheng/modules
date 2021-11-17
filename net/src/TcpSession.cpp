@@ -49,17 +49,26 @@ void TcpSession::write(shared_ptr<string> sendMsg, size_t offset, size_t end) {
 void TcpSession::closeConnection() {
     isCloseConnection = true;
     auto e = ObjPool::allocate<Event>(EventCloseConnection, shared_from_this());
-    epoll->receiveEvent(e);
+	auto ep = epoll.lock();
+	if (ep != nullptr) {
+		ep->receiveEvent(e);
+	}
 }
 
 void TcpSession::closeListen() {
     auto e = ObjPool::allocate<Event>(EventCloseListener, shared_from_this());
-    epoll->receiveEvent(e);
+	auto ep = epoll.lock();
+	if (ep != nullptr) {
+		ep->receiveEvent(e);
+	}
 }
 
 void TcpSession::deleteSession() {
     auto e = ObjPool::allocate<Event>(EventDeleteSession, shared_from_this());
-    epoll->receiveEvent(e);
+	auto ep = epoll.lock();
+	if (ep != nullptr) {
+		ep->receiveEvent(e);
+	}
 }
 
 void TcpSession::sessionInit() {
@@ -70,27 +79,35 @@ void TcpSession::sessionClear() {
 
 }
 
-const string& TcpSession::addTicker(int h, int m, int s, int ms) {
-    auto t = ObjPool::allocate<Time>(h, m, s, ms, epoll->shared_from_this());
-    auto arg = ObjPool::allocate<EpollEventArg>(t, shared_from_this());
-    auto e = ObjPool::allocate<Event>(EventTicker, arg);
-    epoll->receiveEvent(e);
-    return t->uuid;
+shared_ptr<Time> TcpSession::addTicker(int h, int m, int s, int ms) {
+	auto ep = epoll.lock();
+	if (ep != nullptr) {
+		auto t = ObjPool::allocate<Time>(h, m, s, ms, ep->shared_from_this());
+		auto arg = ObjPool::allocate<EpollEventArg>(t, shared_from_this());
+		auto e = ObjPool::allocate<Event>(EventTicker, arg);
+		ep->receiveEvent(e);
+		return t;
+	}
+	return nullptr;
 }
 
-const string& TcpSession::addTimer(int h, int m, int s, int ms) {
-    auto t = ObjPool::allocate<Time>(h, m, s, ms, epoll->shared_from_this());
-    auto arg = ObjPool::allocate<EpollEventArg>(t, shared_from_this());
-    auto e = ObjPool::allocate<Event>(EventTimer, arg);
-    epoll->receiveEvent(e);
-    return t->uuid;
+shared_ptr<Time> TcpSession::addTimer(int h, int m, int s, int ms) {
+	auto ep = epoll.lock();
+	if (ep != nullptr) {
+		auto t = ObjPool::allocate<Time>(h, m, s, ms, ep->shared_from_this());
+		auto arg = ObjPool::allocate<EpollEventArg>(t, shared_from_this());
+		auto e = ObjPool::allocate<Event>(EventTimer, arg);
+		ep->receiveEvent(e);
+		return t;
+	}
+	return nullptr;
 }
 
-void TcpSession::handleTimerTimeOut(const string& uuid) {
+void TcpSession::handleTimerTimeOut(shared_ptr<Time> t) {
 
 }
 
-void TcpSession::handleTickerTimeOut(const string& uuid) {
+void TcpSession::handleTickerTimeOut(shared_ptr<Time> t) {
 
 }
 

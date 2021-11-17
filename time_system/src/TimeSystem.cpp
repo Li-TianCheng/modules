@@ -31,11 +31,6 @@ Thread &TimeSystem::getThread() {
     return thread;
 }
 
-void TimeSystem::deleteTicker(shared_ptr<Time> arg) {
-    auto e = ObjPool::allocate<Event>(EventDeleteTicker, arg);
-    getTimeWheel()->receiveEvent(e);
-}
-
 void *TimeSystem::handle(void *) {
     getTimeWheel()->timeWheelCycle();
     return nullptr;

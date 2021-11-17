@@ -30,7 +30,6 @@ private:
     void init();
     void addTimeToWheel(EventKey e, shared_ptr<Time> t);
     void update();
-    static void handleDeleteTicker(shared_ptr<void> arg);
     static void handleTimerEvent(shared_ptr<void> arg);
     static void handleTickerEvent(shared_ptr<void> arg);
     static void handleTimerTimeOut(shared_ptr<void> arg);
@@ -50,7 +49,7 @@ private:
 };
 
 struct TimeWheelEventArg {
-    shared_ptr<Time> t;
+	weak_ptr<Time> t;
     shared_ptr<Time> nextTime;
     TimeWheelEventArg(shared_ptr<Time> t, shared_ptr<Time> nextTime): t(t), nextTime(nextTime) {};
 };

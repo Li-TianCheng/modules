@@ -14,7 +14,6 @@ void TimeWheel::init() {
     registerEvent(EventTicker, handleTickerEvent);
     registerEvent(EventTimerTimeOut, handleTimerTimeOut);
     registerEvent(EventTickerTimeOut, handleTickerTimeOut);
-    registerEvent(EventDeleteTicker, handleDeleteTicker);
     registerEvent(EventEndCycle, handleEndCycle);
 }
 
@@ -22,44 +21,49 @@ void TimeWheel::handleTimerEvent(shared_ptr<void> arg) {
     if (arg == nullptr){
         return;
     }
-    static_pointer_cast<Time>(arg)->tPtr->addTimeToWheel(EventTimerTimeOut, static_pointer_cast<Time>(arg));
+	auto t = static_pointer_cast<Time>(arg)->tPtr.lock();
+	if (t != nullptr) {
+		t->addTimeToWheel(EventTimerTimeOut, static_pointer_cast<Time>(arg));
+	}
 }
 
 void TimeWheel::handleTickerEvent(shared_ptr<void> arg) {
     if (arg == nullptr){
         return;
     }
-    static_pointer_cast<Time>(arg)->tPtr->addTimeToWheel(EventTickerTimeOut, static_pointer_cast<Time>(arg));
+	auto t = static_pointer_cast<Time>(arg)->tPtr.lock();
+	if (t != nullptr) {
+		t->addTimeToWheel(EventTickerTimeOut, static_pointer_cast<Time>(arg));
+	}
 }
 
 void TimeWheel::handleTimerTimeOut(shared_ptr<void> arg) {
     auto t = static_pointer_cast<TimeWheelEventArg>(arg)->t;
-    if (t->ePtr != nullptr){
-        auto e = ObjPool::allocate<Event>(EventTimerTimeOut, t);
-        t->ePtr->receiveEvent(e);
-    }
+	auto time = t.lock();
+	if (time != nullptr) {
+		auto ePtr = time->ePtr.lock();
+		if (ePtr != nullptr) {
+			auto e = ObjPool::allocate<Event>(EventTimerTimeOut, time);
+			ePtr->receiveEvent(e);
+		}
+	}
 }
 
 void TimeWheel::handleTickerTimeOut(shared_ptr<void> arg) {
     auto t = static_pointer_cast<TimeWheelEventArg>(arg)->t;
-    auto tPtr = t->tPtr;
-    if (t->ePtr != nullptr){
-        auto e = ObjPool::allocate<Event>(EventTickerTimeOut, t);
-        t->ePtr->receiveEvent(e);
-        handleTickerEvent(t);
-    }
-}
-
-void TimeWheel::handleDeleteTicker(shared_ptr<void> arg) {
-    if (arg == nullptr) {
-        return;
-    }
-    auto t = static_pointer_cast<Time>(arg);
-    t->ePtr = nullptr;
+	auto time = t.lock();
+	if (time != nullptr) {
+		auto ePtr = time->ePtr.lock();
+		if (ePtr != nullptr) {
+			auto e = ObjPool::allocate<Event>(EventTickerTimeOut, time);
+			ePtr->receiveEvent(e);
+			handleTickerEvent(time);
+		}
+	}
 }
 
 void TimeWheel::addTimeToWheel(EventKey e, shared_ptr<Time> t) {
-    auto nextTime = ObjPool::allocate<Time>(t->h+hIter, t->m+mIter, t->s+sIter, t->ms+msIter, t->ePtr);
+    auto nextTime = ObjPool::allocate<Time>(t->h+hIter, t->m+mIter, t->s+sIter, t->ms+msIter, t->ePtr.lock());
     nextTime->s += nextTime->ms / 1000;
     nextTime->m += nextTime->s / 60;
     nextTime->h += nextTime->m / 60;

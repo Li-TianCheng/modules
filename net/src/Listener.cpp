@@ -114,13 +114,15 @@ void Listener::cycleInit() {
 }
 
 void Listener::handleCloseListener(shared_ptr<void> arg) {
-    auto server = static_pointer_cast<TcpServerBase>(arg);
-    auto listener = static_pointer_cast<Listener>(server->listener);
-    epoll_ctl(listener->epollFd, EPOLL_CTL_DEL, server->serverFd, &server->epollEvent);
-    ::shutdown(server->serverFd, SHUT_RD);
-    ::close(server->serverFd);
-    listener->listenMap.erase(server->serverFd);
-    LOG(Info, "port:"+std::to_string(server->port)+" listen end");
+	auto server = static_pointer_cast<TcpServerBase>(arg);
+	auto listener = static_pointer_cast<Listener>(server->listener.lock());
+	if (listener != nullptr) {
+		epoll_ctl(listener->epollFd, EPOLL_CTL_DEL, server->serverFd, &server->epollEvent);
+		::shutdown(server->serverFd, SHUT_RD);
+		::close(server->serverFd);
+		listener->listenMap.erase(server->serverFd);
+		LOG(Info, "port:"+std::to_string(server->port)+" listen end");
+	}
 }
 
 void Listener::addNewSession(shared_ptr<TcpSession> session) {

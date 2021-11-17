@@ -40,7 +40,10 @@ void EpollTask::init() {
 
 void EpollTask::handleAddSession(shared_ptr<void> arg) {
     auto session = static_pointer_cast<TcpSession>(arg);
-    static_pointer_cast<EpollTask>(session->epoll)->addNewSession(session);
+	auto epoll = session->epoll.lock();
+	if (epoll != nullptr) {
+		static_pointer_cast<EpollTask>(epoll)->addNewSession(session);
+	}
 }
 
 void EpollTask::addNewSession(shared_ptr<TcpSession> session) {
@@ -75,65 +78,48 @@ void EpollTask::deleteSession(int fd) {
 }
 
 void EpollTask::handleTickerTimeOut(shared_ptr<void> arg) {
-    auto t = static_pointer_cast<Time>(arg);
-    auto e = static_pointer_cast<EpollTask>(t->ePtr);
-    if (e == nullptr) {
-        TimeSystem::deleteTicker(t);
-        return;
-    }
-    if (e->timeToFd.find(t) != e->timeToFd.end()) {
-        int fd = e->timeToFd[t];
-        if (e->sessionManager.find(fd) != e->sessionManager.end()) {
-            e->sessionManager[fd]->handleTickerTimeOut(t->uuid);
-        } else {
-            e->timeToFd.erase(t);
-            TimeSystem::deleteTicker(t);
-        }
-    }
+	auto t = static_pointer_cast<Time>(arg);
+	auto e = static_pointer_cast<EpollTask>(t->ePtr.lock());
+	if (e != nullptr && e->timeToFd.find(t) != e->timeToFd.end()) {
+		int fd = e->timeToFd[t];
+		if (e->sessionManager.find(fd) != e->sessionManager.end()) {
+			e->sessionManager[fd]->handleTickerTimeOut(t);
+		} else {
+			e->timeToFd.erase(t);
+		}
+	}
 }
 
 void EpollTask::handleTimerTimeOut(shared_ptr<void> arg) {
-    auto t = static_pointer_cast<Time>(arg);
-    auto e = static_pointer_cast<EpollTask>(t->ePtr);
-    if (e == nullptr) {
-        TimeSystem::deleteTicker(t);
-        return;
-    }
-    if (e->timeToFd.find(t) != e->timeToFd.end()) {
-        int fd = e->timeToFd[t];
-        if (e->sessionManager.find(fd) != e->sessionManager.end()) {
-            e->sessionManager[fd]->handleTimerTimeOut(t->uuid);
-        }
-        e->timeToFd.erase(t);
-    }
+	auto t = static_pointer_cast<Time>(arg);
+	auto e = static_pointer_cast<EpollTask>(t->ePtr.lock());
+	if (e != nullptr && e->timeToFd.find(t) != e->timeToFd.end()) {
+		int fd = e->timeToFd[t];
+		if (e->sessionManager.find(fd) != e->sessionManager.end()) {
+			e->sessionManager[fd]->handleTimerTimeOut(t);
+		}
+		e->timeToFd.erase(t);
+	}
 }
 
 void EpollTask::handleTicker(shared_ptr<void> arg) {
-    auto session = static_pointer_cast<EpollEventArg>(arg)->session;
-    auto t = static_pointer_cast<EpollEventArg>(arg)->t;
-    auto e = static_pointer_cast<EpollTask>(t->ePtr);
-    if (e == nullptr) {
-        TimeSystem::deleteTicker(t);
-        return;
-    }
-    if (e->sessionManager.find(session->epollEvent.data.fd) != e->sessionManager.end()) {
-        e->timeToFd[t] = session->epollEvent.data.fd;
-        TimeSystem::receiveEvent(EventTicker, t);
-    }
+	auto session = static_pointer_cast<EpollEventArg>(arg)->session;
+	auto t = static_pointer_cast<EpollEventArg>(arg)->t;
+	auto e = static_pointer_cast<EpollTask>(t->ePtr.lock());
+	if (e != nullptr && e->sessionManager.find(session->epollEvent.data.fd) != e->sessionManager.end()) {
+		e->timeToFd[t] = session->epollEvent.data.fd;
+		TimeSystem::receiveEvent(EventTicker, t);
+	}
 }
 
 void EpollTask::handleTimer(shared_ptr<void> arg) {
-    auto session = static_pointer_cast<EpollEventArg>(arg)->session;
-    auto t = static_pointer_cast<EpollEventArg>(arg)->t;
-    auto e = static_pointer_cast<EpollTask>(t->ePtr);
-    if (e == nullptr) {
-        TimeSystem::deleteTicker(t);
-        return;
-    }
-    if (e->sessionManager.find(session->epollEvent.data.fd) != e->sessionManager.end()) {
-        e->timeToFd[t] = session->epollEvent.data.fd;
-        TimeSystem::receiveEvent(EventTimer, t);
-    }
+	auto session = static_pointer_cast<EpollEventArg>(arg)->session;
+	auto t = static_pointer_cast<EpollEventArg>(arg)->t;
+	auto e = static_pointer_cast<EpollTask>(t->ePtr.lock());
+	if (e != nullptr && e->sessionManager.find(session->epollEvent.data.fd) != e->sessionManager.end()) {
+		e->timeToFd[t] = session->epollEvent.data.fd;
+		TimeSystem::receiveEvent(EventTimer, t);
+	}
 }
 
 bool EpollTask::isRunning() {
@@ -224,7 +210,10 @@ void EpollTask::writeTask(shared_ptr<void> arg) {
     session->mutex.unlock();
     if (session->isCloseConnection) {
         auto e = ObjPool::allocate<Event>(EventCloseConnection, session);
-        static_pointer_cast<EpollTask>(session->epoll)->receiveEvent(e);
+	    auto epoll = session->epoll.lock();
+	    if (epoll != nullptr) {
+		    static_pointer_cast<EpollTask>(epoll)->receiveEvent(e);
+	    }
     }
     session->isWrite = false;
     epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
@@ -268,9 +257,6 @@ void EpollTask::cycleTask(shared_ptr<void> arg) {
             }
         }
     }
-    for (auto& t : epoll->timeToFd) {
-        TimeSystem::deleteTicker(t.first);
-    }
     epoll->timeToFd.clear();
     auto e = ObjPool::allocate<Event>(EventEndCycle, nullptr);
     epoll->receiveEvent(e);
@@ -281,20 +267,29 @@ void EpollTask::cycleTask(shared_ptr<void> arg) {
 }
 
 void EpollTask::handleCloseConnection(shared_ptr<void> arg) {
-    auto session = static_pointer_cast<TcpSession>(arg);
-    if (!session->isClose && session->isWriteDone) {
-        static_pointer_cast<EpollTask>(session->epoll)->deleteSession(session->epollEvent.data.fd);
-    }
+	auto session = static_pointer_cast<TcpSession>(arg);
+	if (!session->isClose && session->isWriteDone) {
+		auto epoll = session->epoll.lock();
+		if (epoll != nullptr) {
+			static_pointer_cast<EpollTask>(epoll)->deleteSession(session->epollEvent.data.fd);
+		}
+	}
 }
 
 void EpollTask::handleCloseListen(shared_ptr<void> arg) {
-    auto session = static_pointer_cast<TcpSession>(arg);
-    session->server->close();
+	auto session = static_pointer_cast<TcpSession>(arg);
+	auto server = session->server.lock();
+	if (server != nullptr) {
+		server->close();
+	}
 }
 
 void EpollTask::handleDeleteSession(shared_ptr<void> arg) {
-    auto session = static_pointer_cast<TcpSession>(arg);
+	auto session = static_pointer_cast<TcpSession>(arg);
 	if (!session->isClose) {
-		static_pointer_cast<EpollTask>(session->epoll)->deleteSession(session->epollEvent.data.fd);
+		auto epoll = session->epoll.lock();
+		if (epoll != nullptr) {
+			static_pointer_cast<EpollTask>(epoll)->deleteSession(session->epollEvent.data.fd);
+		}
 	}
 }

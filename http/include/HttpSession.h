@@ -19,7 +19,7 @@ public:
     ~HttpSession() override = default;
     void sessionInit() override;
     void sessionClear() override;
-    void handleTickerTimeOut(const string &uuid) override;
+    void handleTickerTimeOut(shared_ptr<Time> t) override;
 private:
     void sendResponse(shared_ptr<Http> response);
     void handleReadDone(iter pos, size_t n) override;
@@ -27,12 +27,12 @@ private:
     void parse(const char& c);
     string getGMTTime();
 private:
-    shared_ptr<Http> request;
-    string key;
-    int count;
-    int status;
-    int timeout;
-    string uuid;
+	string key;
+	int count;
+	int status;
+	int timeout;
+	shared_ptr<Time> time;
+	shared_ptr<Http> request;
 };
 
 struct Http {

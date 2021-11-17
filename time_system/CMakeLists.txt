@@ -8,5 +8,3 @@ include_directories(./include ..)
 aux_source_directory(./src SOURCE_FILES)
 
 add_library(TimeSystem ${SOURCE_FILES})
-
-target_link_libraries(TimeSystem uuid)

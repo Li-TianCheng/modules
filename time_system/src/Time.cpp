@@ -5,11 +5,7 @@
 #include "time_system/include/Time.h"
 
 Time::Time(int h, int m, int s, int ms, shared_ptr<EventSystem> ePtr): h(h), m(m), s(s), ms(ms), ePtr(ePtr) {
-    uuid_t uu;
-    uuid_generate_time_safe(uu);
-    char tmp[37];
-    uuid_unparse(uu, tmp);
-    uuid = tmp;
+
 }
 
 Time& Time::operator+=(const Time& t) {

@@ -6,7 +6,10 @@
 
 void TcpServerBase::close() {
     auto e = ObjPool::allocate<Event>(EventCloseListener, shared_from_this());
-    listener->receiveEvent(e);
+	auto l = listener.lock();
+	if (l != nullptr) {
+		l->receiveEvent(e);
+	}
 }
 
 shared_ptr<TcpSession> TcpServerBase::getSession() {

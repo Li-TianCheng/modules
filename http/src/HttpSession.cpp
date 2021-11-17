@@ -142,7 +142,7 @@ void HttpSession::parse(const char &c) {
 }
 
 string HttpSession::getGMTTime() {
-    time_t now = time(nullptr);
+    time_t now = ::time(nullptr);
     tm* gmt = gmtime(&now);
     const char* fmt = "%a, %d %b %Y %H:%M:%S GMT";
     char timeStr[30];
@@ -151,15 +151,15 @@ string HttpSession::getGMTTime() {
 }
 
 void HttpSession::sessionInit() {
-    uuid = addTicker(0, 0, 1, 0);
+    time = addTicker(0, 0, 1, 0);
 }
 
 void HttpSession::sessionClear() {
 
 }
 
-void HttpSession::handleTickerTimeOut(const string &uuid) {
-    if (this->uuid == uuid) {
+void HttpSession::handleTickerTimeOut(shared_ptr<Time> t) {
+    if (time == t) {
         timeout++;
         if (timeout > 30) {
             deleteSession();

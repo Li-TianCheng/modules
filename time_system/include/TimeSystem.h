@@ -14,7 +14,6 @@ public:
     static void init();
     static void close();
     static void receiveEvent(EventKey eventType, shared_ptr<Time> arg);
-    static void deleteTicker(shared_ptr<Time> arg);
     TimeSystem(const TimeSystem&) = delete;
     TimeSystem(TimeSystem&&) = delete;
     TimeSystem& operator=(const TimeSystem&) = delete;

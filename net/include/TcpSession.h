@@ -48,13 +48,13 @@ public:
     void closeConnection();
     void closeListen();
     void deleteSession();
-    const string& addTicker(int h, int m, int s, int ms);
-    const string& addTimer(int h, int m, int s, int ms);
+    shared_ptr<Time> addTicker(int h, int m, int s, int ms);
+	shared_ptr<Time> addTimer(int h, int m, int s, int ms);
     void readDone(size_t n);
     virtual void sessionInit();
     virtual void sessionClear();
-    virtual void handleTickerTimeOut(const string& uuid);
-    virtual void handleTimerTimeOut(const string& uuid);
+    virtual void handleTickerTimeOut(shared_ptr<Time> t);
+    virtual void handleTimerTimeOut(shared_ptr<Time> t);
     virtual void handleReadDone(iter pos, size_t n);
     virtual ~TcpSession() = default;
 private:
@@ -63,7 +63,6 @@ private:
     friend class TcpServer;
     friend class Listener;
 protected:
-    std::shared_ptr<TcpServerBase> server;
     std::atomic<bool> isCloseConnection;
     std::atomic<bool> isWrite;
     std::atomic<bool> isRead;
@@ -71,7 +70,8 @@ protected:
     std::atomic<bool> isWriteDone;
     deque<Msg> msgQueue;
     Mutex mutex;
-    shared_ptr<EventSystem> epoll;
+    weak_ptr<EventSystem> epoll;
+	weak_ptr<TcpServerBase> server;
     int epollFd;
     sockaddr address;
     socklen_t len;

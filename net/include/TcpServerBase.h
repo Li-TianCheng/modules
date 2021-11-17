@@ -26,7 +26,7 @@ protected:
     AddressType addressType;
     epoll_event epollEvent;
     sockaddr serverAddress;
-    std::shared_ptr<EventSystem> listener;
+    weak_ptr<EventSystem> listener;
 };
 
 #endif //NET_TCPSERVERBASE_H

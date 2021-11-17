@@ -10,6 +10,7 @@
 #include "config_system/include/ConfigSystem.h"
 
 using std::shared_ptr;
+using std::weak_ptr;
 using std::static_pointer_cast;
 
 class ObjPool{
