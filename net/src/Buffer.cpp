@@ -6,7 +6,7 @@
 
 
 Buffer::Buffer(int bufferChunkSize) : bufferChunkSize(bufferChunkSize), buffer(1), readIndex(0), writeIndex(0) {
-    buffer[0] = new char[bufferChunkSize];
+	buffer[0] = (char*)ObjPool::allocateBuffer(bufferChunkSize);
 }
 
 iter Buffer::getReadPos() {
@@ -20,7 +20,7 @@ size_t Buffer::getMsgNum() {
 void Buffer::write(const char* c, size_t n) {
     for (int i = 0; i < n; i++) {
         if (writeIndex == bufferChunkSize * buffer.size()) {
-            buffer.push_back(new char[bufferChunkSize]);
+            buffer.push_back((char*)ObjPool::allocateBuffer(bufferChunkSize));
         }
         buffer[writeIndex/bufferChunkSize][writeIndex%bufferChunkSize] = *(c+i);
         writeIndex++;
@@ -40,7 +40,7 @@ void Buffer::readDone(size_t n) {
 int Buffer::readFromFd(int fd) {
     while (true) {
         if (writeIndex == bufferChunkSize * buffer.size()) {
-            buffer.push_back(new char[bufferChunkSize]);
+            buffer.push_back((char*)ObjPool::allocateBuffer(bufferChunkSize));
         }
         size_t size = bufferChunkSize - writeIndex % bufferChunkSize;
         ssize_t recvNum = ::recv(fd, buffer[writeIndex/bufferChunkSize]+writeIndex%bufferChunkSize, size, MSG_DONTWAIT);
@@ -87,7 +87,7 @@ void Buffer::shrink() {
         return;
     }
     if ((buffer.size()-2)*bufferChunkSize > writeIndex) {
-        delete[] buffer.back();
+	    ObjPool::deallocateBuffer(buffer.back(), bufferChunkSize);
         buffer.pop_back();
     } else {
         return;
@@ -97,7 +97,7 @@ void Buffer::shrink() {
 
 Buffer::~Buffer() {
     for (auto& c : buffer) {
-        delete[] c;
+		ObjPool::deallocateBuffer(c, bufferChunkSize);
     }
 }
 

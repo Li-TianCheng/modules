@@ -11,6 +11,7 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include "mem_pool/include/ObjPool.hpp"
 
 using std::deque;
 using std::string;

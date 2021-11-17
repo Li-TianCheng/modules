@@ -18,6 +18,8 @@ public:
     template<typename T, typename... Args>
     static shared_ptr<T> allocate(Args... args);
     static void init();
+	static void* allocateBuffer(size_t size);
+	static void deallocateBuffer(void* ptr, size_t size);
     ObjPool() = delete;
     ObjPool(const ObjPool&) = delete;
     ObjPool(ObjPool&&) = delete;
@@ -39,6 +41,14 @@ template<typename T> inline
 void ObjPool::deallocate(T* ptr) {
     ptr->~T();
     getInstance().deallocate(ptr, sizeof(T));
+}
+
+inline void* ObjPool::allocateBuffer(size_t size) {
+	return getInstance().allocateBuffer(size);
+}
+
+inline void ObjPool::deallocateBuffer(void* ptr, size_t size) {
+	getInstance().deallocateBuffer(ptr, size);
 }
 
 inline MemPool& ObjPool::getInstance() {

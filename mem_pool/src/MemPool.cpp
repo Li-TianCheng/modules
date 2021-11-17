@@ -34,3 +34,37 @@ void MemPool::deallocate(void *ptr, size_t size) {
     mutex[(size-4)/4].unlock();
 }
 
+void* MemPool::allocateBuffer(size_t size) {
+	bufferChunk* m;
+	bufferMutex.lock();
+	if (bufferMem.find(size) == bufferMem.end()) {
+		bufferMem[size] = nullptr;
+	}
+	if (bufferMem[size] == nullptr) {
+		m = (bufferChunk*)malloc(size);
+	} else {
+		m = bufferMem[size];
+		bufferMem[size] = m->next;
+	}
+	bufferMutex.unlock();
+	return m;
+}
+
+void MemPool::deallocateBuffer(void* ptr, size_t size) {
+	bufferMutex.lock();
+	((bufferChunk*)ptr)->next = bufferMem[size];
+	bufferMem[size] = (bufferChunk*)ptr;
+	bufferMutex.unlock();
+}
+
+MemPool::~MemPool() {
+	for (auto& m : bufferMem) {
+		bufferChunk* free = m.second;
+		while (free != nullptr) {
+			bufferChunk* tmp = free->next;
+			::free(free);
+			free = tmp;
+		}
+	}
+}
+
