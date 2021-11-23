@@ -20,7 +20,7 @@ private:
 private:
 	weak_ptr<EventSystem> raft;
 	shared_ptr<string> send;
-	RaftLog* match;
+	shared_ptr<RaftLog> match;
 	string ip;
 	string cmd;
 };

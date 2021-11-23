@@ -22,11 +22,11 @@ void RaftSession::handleReadDone(iter pos, size_t n) {
 				string leaderIp = split[2];
 				unsigned long prevLogIdx = stoul(split[3]);
 				unsigned long prevLogTerm = stoul(split[4]);
-				vector<RaftLog*> entries;
+				vector<shared_ptr<RaftLog>> entries;
 				vector<string> tmp = utils::split(split[5].substr(1, split[5].size()-2), ',');
 				entries.reserve(tmp.size());
 				for (auto& log : tmp) {
-					entries.push_back(new RaftLog(log));
+					entries.push_back(ObjPool::allocate<RaftLog>(log));
 				}
 				unsigned long leaderCommit = stoul(split[6]);
 				auto res = r->appendEntries(term, leaderIp, prevLogIdx, prevLogTerm, entries, leaderCommit);

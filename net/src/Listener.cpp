@@ -4,8 +4,7 @@
 
 #include "net/include/Listener.h"
 
-Listener::Listener() : waitTime(ConfigSystem::getConfig()["system"]["net"]["listener"]["check_time"].asInt()),
-						waitCLose(nullptr), checkTime(ConfigSystem::getConfig()["system"]["net"]["listener"]["check_time"].asInt()),
+Listener::Listener() : waitTime(1), waitCLose(nullptr),
                         epollSessionNum(ConfigSystem::getConfig()["system"]["net"]["listener"]["epoll_session_num"].asInt()),
                         maxEpollNum(ConfigSystem::getConfig()["system"]["net"]["listener"]["max_epoll_task_num"].asInt()) {
     signal(SIGPIPE, SIG_IGN);
@@ -53,7 +52,7 @@ void Listener::listen() {
         epoll_event events[listenMap.size()];
         int num = epoll_wait(epollFd, events, listenMap.size(), waitTime);
         if (num <= 0) {
-            waitTime = checkTime;
+            waitTime = 1;
             addNewSession(nullptr);
         } else {
             waitTime = 0;
@@ -102,7 +101,7 @@ Listener::~Listener() {
 
 void Listener::cycleInit() {
     for (auto& it : listenMap) {
-        int err = ::listen(it.first, ConfigSystem::getConfig()["system"]["net"]["listener"]["listen_num"].asInt());
+        int err = ::listen(it.first, ConfigSystem::getConfig()["system"]["net"]["listener"]["accept_num"].asInt());
         if (err == -1){
             ::close(it.first);
             throw std::runtime_error(std::to_string(it.first)+"监听失败");
@@ -197,7 +196,7 @@ void Listener::addNewSession(shared_ptr<TcpSession> session) {
 void Listener::handleAddListener(shared_ptr<void> arg) {
     auto _arg = static_pointer_cast<addListenerArg>(arg);
     _arg->listener->registerListener(_arg->port, _arg->addressType, _arg->server);
-    int err = ::listen(_arg->server->serverFd, ConfigSystem::getConfig()["system"]["net"]["listener"]["listen_num"].asInt());
+    int err = ::listen(_arg->server->serverFd, ConfigSystem::getConfig()["system"]["net"]["listener"]["accept_num"].asInt());
     if (err == -1){
         ::close(_arg->server->serverFd);
         return;

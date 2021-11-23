@@ -4,13 +4,14 @@
 
 #include "Raft.h"
 
-Raft::Raft() : listener(ObjPool::allocate<Listener>()), state(Follower), currTerm(0), voteNum(0), voted(false),
+Raft::Raft() : listener(ObjPool::allocate<Listener>()), state(Follower), currTerm(0), voteNum(0), voted(false), logFileLen(0),
 			   heartbeatTime(ConfigSystem::getConfig()["raft"]["heartbeat_time"].asInt()),
 			   timeoutMax(ConfigSystem::getConfig()["raft"]["timeout_max"].asInt()),
 			   timeoutMin(ConfigSystem::getConfig()["raft"]["timeout_min"].asInt()),
 			   hostIp(ConfigSystem::getConfig()["raft"]["host"].asString()),
+			   logPath(ConfigSystem::getConfig()["raft"]["log_path"].asString()),
 			   snapshotPath(ConfigSystem::getConfig()["raft"]["snapshot_path"].asString()) {
-	head = new RaftLog(0, 0, "init", "init");
+	head = ObjPool::allocate<RaftLog>(0, 0, "init", "init");
 	last = head;
 	commit = head;
 	lastApplied = head;
@@ -21,7 +22,22 @@ Raft::Raft() : listener(ObjPool::allocate<Listener>()), state(Follower), currTer
 		nextIdx[c.asString()] = head;
 	}
 	srand(::time(nullptr));
-	logFile.open(ConfigSystem::getConfig()["raft"]["log_path"].asString(), std::ios::out | std::ios::trunc);
+	logFile.open(logPath, std::ios::in|std::ios::out|std::ios::app);
+	string tmp;
+	while (getline(logFile, tmp)) {
+		if (tmp.size() > 2 && tmp[tmp.size()-2] == '#' && tmp[tmp.size()-1] == '#') {
+			logFileLen += tmp.size()+1;
+			auto log = ObjPool::allocate<RaftLog>(tmp);
+			last->next = log;
+			log->prev = last;
+			last = last->next;
+		} else {
+			truncate(logPath.data(), logFileLen);
+			break;
+		}
+	}
+	currTerm = last->term;
+	logFile.clear();
 }
 
 void Raft::addServer(int port, AddressType addressType, shared_ptr<TcpServerBase> server) {
@@ -43,10 +59,13 @@ void Raft::serve() {
 string Raft::startCmd(const string& type, const string &cmd) {
 	if (state == Leader) {
 		mutex.lock();
-		auto* log = new RaftLog(last->idx+1, currTerm, type, cmd);
+		auto log = ObjPool::allocate<RaftLog>(last->idx+1, currTerm, type, cmd);
 		last->next = log;
 		log->prev = last;
 		last = log;
+		logFileLen += ((string)*log).size()+1;
+		logFile.clear();
+		logFile << (string)*log << endl;
 		replicate();
 		while (state != Leader || commit->idx < log->idx) {
 			condition.wait(mutex);
@@ -60,12 +79,19 @@ string Raft::startCmd(const string& type, const string &cmd) {
 	return leaderIp;
 }
 
+string Raft::isLeader() {
+	if (state == Leader) {
+		return "";
+	}
+	return leaderIp;
+}
+
 void Raft::registerFuncHandler(const string &type, void (*handler)(const string&)) {
 	funcHandler[type] = handler;
 }
 
 tuple<unsigned long, bool>
-Raft::appendEntries(unsigned long term, const string& ip, unsigned long prevLogIdx, unsigned long prevLogTerm, vector<RaftLog*> entries,
+Raft::appendEntries(unsigned long term, const string& ip, unsigned long prevLogIdx, unsigned long prevLogTerm, vector<shared_ptr<RaftLog>> entries,
                     unsigned long leaderCommit) {
 	if (term < currTerm) {
 		return {currTerm, false};
@@ -77,36 +103,59 @@ Raft::appendEntries(unsigned long term, const string& ip, unsigned long prevLogI
 	int ms = rand() % (timeoutMax-timeoutMin) + timeoutMin;
 	time = ObjPool::allocate<Time>(0, 0, 0, ms, shared_from_this());
 	TimeSystem::receiveEvent(EventTimer, time);
-	if (prevLogIdx < last->idx) {
-		while (last->idx != prevLogIdx) {
-			RaftLog* curr = last;
-			last = last->prev;
-			last->next = nullptr;
-			delete curr;
-		}
+	if (prevLogIdx > last->idx) {
+		condition.notifyAll(mutex);
+		return {currTerm, false};
 	}
-	if (prevLogIdx == last->idx && prevLogTerm == last->term) {
+	auto curr = last;
+	while (curr->idx != prevLogIdx) {
+		curr = curr->prev.lock();
+	}
+	if (curr->term == prevLogTerm) {
 		for (auto& e : entries) {
-			logFile << (string)*e << std::endl;
-			last->next = e;
-			e->prev = last;
-			last = last->next;
+			if (curr->next != nullptr) {
+				if (curr->next->term != e->term) {
+					auto tmp = curr->next;
+					while (tmp != nullptr) {
+						auto t = tmp->next;
+						logFileLen -= ((string)*tmp).size()+1;
+						tmp = t;
+					}
+					truncate(logPath.data(), logFileLen);
+					curr->next = e;
+					e->prev = curr;
+					logFileLen += ((string)*e).size()+1;
+					logFile.clear();
+					logFile << (string)*e << endl;
+				}
+			} else {
+				curr->next = e;
+				e->prev = curr;
+				logFileLen += ((string)*e).size()+1;
+				logFile.clear();
+				logFile << (string)*e << endl;
+			}
+			curr = curr->next;
 		}
-		while (commit->idx != leaderCommit) {
+		last = curr;
+		logFile.flush();
+		while (commit->idx < leaderCommit) {
 			commit = commit->next;
 		}
 		apply();
 		condition.notifyAll(mutex);
 		return {currTerm, true};
-	}
-	if (prevLogIdx == last->idx && prevLogTerm != last->term) {
-		RaftLog* curr = last;
-		last = last->prev;
+	} else {
+		while (last != curr->prev.lock()) {
+			auto tmp = last->prev.lock();
+			logFileLen -= ((string)*tmp).size()+1;
+			last = tmp;
+		}
+		truncate(logPath.data(), logFileLen);
 		last->next = nullptr;
-		delete curr;
+		condition.notifyAll(mutex);
+		return {currTerm, false};
 	}
-	condition.notifyAll(mutex);
-	return {currTerm, false};
 }
 
 tuple<int, bool> Raft::requestVote(unsigned long term, unsigned long lastLogIdx, unsigned long lastLogTerm) {
@@ -140,6 +189,7 @@ tuple<int, bool> Raft::requestVote(unsigned long term, unsigned long lastLogIdx,
 }
 
 void Raft::replicate() {
+	logFile.flush();
 	for (auto& address : clusterAddress) {
 		sendAppendEntriesRpc(address);
 	}
@@ -192,7 +242,7 @@ void Raft::sendAppendEntriesRpc(const string& address) {
 
 void Raft::sendRequestVoteRpc(const string& address) {
 	auto cmd = ObjPool::allocate<string>();
-	*cmd += "$requestVote$"+to_string(currTerm)+"$"+hostIp+"$"+to_string(last->idx)+"$"+to_string(last->term)+"$$";
+	*cmd += "$requestVote$"+to_string(currTerm)+"$"+to_string(last->idx)+"$"+to_string(last->term)+"$$";
 	auto session = raftServer->getSession();
 	static_pointer_cast<RaftSession>(session)->send = cmd;
 	auto arg = ObjPool::allocate<addNewSessionArg>();
@@ -209,7 +259,6 @@ void Raft::handleTimerTimeOut(shared_ptr<void> arg) {
 	auto raft = static_pointer_cast<Raft>(time->ePtr.lock());
 	raft->mutex.lock();
 	if (raft != nullptr && raft->time == time) {
-		cout << raft->state << " " << raft->currTerm << endl;
 		if (raft->state == Follower) {
 			raft->state = Candidate;
 			raft->election();
@@ -222,7 +271,7 @@ void Raft::handleTimerTimeOut(shared_ptr<void> arg) {
 	raft->condition.notifyAll(raft->mutex);
 }
 
-void Raft::appendEntriesReply(unsigned long term, bool success, const string &ip, RaftLog* match) {
+void Raft::appendEntriesReply(unsigned long term, bool success, const string &ip, shared_ptr<RaftLog> match) {
 	mutex.lock();
 	if (term > currTerm) {
 		currTerm = term;
@@ -244,7 +293,7 @@ void Raft::appendEntriesReply(unsigned long term, bool success, const string &ip
 				}
 			}
 		} else {
-			nextIdx[ip] = nextIdx[ip]->prev;
+			nextIdx[ip] = nextIdx[ip]->prev.lock();
 			sendAppendEntriesRpc(ip);
 		}
 	}
@@ -275,11 +324,6 @@ void Raft::requestVoteReply(unsigned long term, bool success) {
 }
 
 Raft::~Raft() {
-	while (head != nullptr) {
-		auto tmp = head;
-		head = head->next;
-		delete tmp;
-	}
 	logFile.close();
 }
 

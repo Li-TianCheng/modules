@@ -40,7 +40,6 @@ private:
 private:
     int epollFd;
     int waitTime;
-    int checkTime;
     int maxEpollNum;
     int epollSessionNum;
     unordered_map<int, shared_ptr<TcpServerBase>> listenMap;
