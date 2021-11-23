@@ -4,7 +4,8 @@
 
 #include "net/include/Listener.h"
 
-Listener::Listener() : waitTime(-1), waitCLose(nullptr), checkTime(ConfigSystem::getConfig()["system"]["net"]["listener"]["check_time"].asInt()),
+Listener::Listener() : waitTime(ConfigSystem::getConfig()["system"]["net"]["listener"]["check_time"].asInt()),
+						waitCLose(nullptr), checkTime(ConfigSystem::getConfig()["system"]["net"]["listener"]["check_time"].asInt()),
                         epollSessionNum(ConfigSystem::getConfig()["system"]["net"]["listener"]["epoll_session_num"].asInt()),
                         maxEpollNum(ConfigSystem::getConfig()["system"]["net"]["listener"]["max_epoll_task_num"].asInt()) {
     signal(SIGPIPE, SIG_IGN);

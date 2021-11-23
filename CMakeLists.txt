@@ -29,6 +29,8 @@ add_subdirectory(resource)
 
 add_subdirectory(config_system)
 
+add_subdirectory(raft)
+
 add_library(Modules Modules.h)
 
-target_link_libraries(Modules Log Http Redis MySql Net Utils TaskSystem Resource TimeSystem EventSystem MemPool ConfigSystem MyPthread)
+target_link_libraries(Modules Raft Http Redis MySql Net Utils TaskSystem Log Resource TimeSystem EventSystem MemPool ConfigSystem MyPthread)

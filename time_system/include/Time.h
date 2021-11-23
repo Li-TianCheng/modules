@@ -13,13 +13,7 @@ class Time {
 public:
     Time(int h, int m, int s, int ms, shared_ptr<EventSystem> ePtr);
     Time& operator+=(const Time& t);
-private:
-	friend class TimeWheel;
-	friend class TimeSystem;
-	friend class ProgressBar;
-	friend class EpollTask;
-	friend class ResourceManager;
-private:
+public:
 	int ms;
 	int s;
 	int m;
