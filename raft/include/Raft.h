@@ -51,7 +51,7 @@ struct RaftLog {
 class Raft : public EventSystem {
 public:
 	Raft();
-	void addServer(int port, AddressType addressType, shared_ptr<TcpServerBase> server);
+	shared_ptr<Listener> getListener();
 	void serve();
 	string isLeader();
 	string startCmd(const string& type, const string& cmd);
@@ -76,6 +76,7 @@ private:
 	int timeoutMin;
 	int heartbeatTime;
 	int voteNum;
+	int mergeNum;
 	unsigned long currTerm;
 	long logFileLen;
 	bool voted;

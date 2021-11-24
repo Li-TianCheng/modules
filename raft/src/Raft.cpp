@@ -5,6 +5,7 @@
 #include "Raft.h"
 
 Raft::Raft() : listener(ObjPool::allocate<Listener>()), state(Follower), currTerm(0), voteNum(0), voted(false), logFileLen(0),
+               mergeNum(ConfigSystem::getConfig()["raft"]["merge_replication_num"].asInt()),
 			   heartbeatTime(ConfigSystem::getConfig()["raft"]["heartbeat_time"].asInt()),
 			   timeoutMax(ConfigSystem::getConfig()["raft"]["timeout_max"].asInt()),
 			   timeoutMin(ConfigSystem::getConfig()["raft"]["timeout_min"].asInt()),
@@ -40,8 +41,8 @@ Raft::Raft() : listener(ObjPool::allocate<Listener>()), state(Follower), currTer
 	logFile.clear();
 }
 
-void Raft::addServer(int port, AddressType addressType, shared_ptr<TcpServerBase> server) {
-	listener->registerListener(port, addressType, server);
+shared_ptr<Listener> Raft::getListener() {
+	return listener;
 }
 
 void Raft::serve() {
@@ -66,7 +67,9 @@ string Raft::startCmd(const string& type, const string &cmd) {
 		logFileLen += ((string)*log).size()+1;
 		logFile.clear();
 		logFile << (string)*log << endl;
-		replicate();
+		if (last->idx-commit->idx >= mergeNum) {
+			replicate();
+		}
 		while (state != Leader || commit->idx < log->idx) {
 			condition.wait(mutex);
 		}
@@ -231,13 +234,7 @@ void Raft::sendAppendEntriesRpc(const string& address) {
 	static_pointer_cast<RaftSession>(session)->match = last;
 	static_pointer_cast<RaftSession>(session)->ip = address;
 	static_pointer_cast<RaftSession>(session)->send = cmd;
-	auto arg = ObjPool::allocate<addNewSessionArg>();
-	arg->listener = listener;
-	arg->session = session;
-	arg->address = address;
-	arg->addressType = IPV4;
-	auto e = ObjPool::allocate<Event>(EventAddSession, arg);
-	listener->receiveEvent(e);
+	listener->addNewSession(session, address, IPV4);
 }
 
 void Raft::sendRequestVoteRpc(const string& address) {
@@ -246,12 +243,7 @@ void Raft::sendRequestVoteRpc(const string& address) {
 	auto session = raftServer->getSession();
 	static_pointer_cast<RaftSession>(session)->send = cmd;
 	auto arg = ObjPool::allocate<addNewSessionArg>();
-	arg->listener = listener;
-	arg->session = session;
-	arg->address = address;
-	arg->addressType = IPV4;
-	auto e = ObjPool::allocate<Event>(EventAddSession, arg);
-	listener->receiveEvent(e);
+	listener->addNewSession(session, address, IPV4);
 }
 
 void Raft::handleTimerTimeOut(shared_ptr<void> arg) {
@@ -293,7 +285,9 @@ void Raft::appendEntriesReply(unsigned long term, bool success, const string &ip
 				}
 			}
 		} else {
-			nextIdx[ip] = nextIdx[ip]->prev.lock();
+			if (nextIdx[ip] != head) {
+				nextIdx[ip] = nextIdx[ip]->prev.lock();
+			}
 			sendAppendEntriesRpc(ip);
 		}
 	}

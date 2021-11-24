@@ -230,7 +230,19 @@ void Listener::handleAddSession(shared_ptr<void> arg) {
     }
     int err = ::connect(session->epollEvent.data.fd, &session->address, sizeof(session->address));
     if (err == -1) {
+		session->sessionInit();
+		session->sessionClear();
         return;
     }
-    _arg->listener->addNewSession(session);
+    static_pointer_cast<Listener>(_arg->listener)->addNewSession(session);
+}
+
+void Listener::addNewSession(shared_ptr<TcpSession> session, const string &address, AddressType addressType) {
+	auto arg = ObjPool::allocate<addNewSessionArg>();
+	arg->listener = shared_from_this();
+	arg->session = session;
+	arg->address = address;
+	arg->addressType = IPV4;
+	auto e = ObjPool::allocate<Event>(EventAddSession, arg);
+	receiveEvent(e);
 }
