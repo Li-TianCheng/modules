@@ -39,6 +39,7 @@ Raft::Raft() : listener(ObjPool::allocate<Listener>()), state(Follower), currTer
 	}
 	currTerm = last->term;
 	logFile.clear();
+	LOG(Info, "raft server started, host ip["+hostIp+"], curr term["+to_string(currTerm)+"]");
 }
 
 shared_ptr<Listener> Raft::getListener() {
@@ -58,6 +59,7 @@ void Raft::serve() {
 }
 
 string Raft::startCmd(const string& type, const string &cmd) {
+	LOG(Info, "start command["+type+":"+cmd+"]");
 	if (state == Leader) {
 		mutex.lock();
 		auto log = ObjPool::allocate<RaftLog>(last->idx+1, currTerm, type, cmd);
@@ -96,6 +98,10 @@ void Raft::registerFuncHandler(const string &type, void (*handler)(const string&
 tuple<unsigned long, bool>
 Raft::appendEntries(unsigned long term, const string& ip, unsigned long prevLogIdx, unsigned long prevLogTerm, vector<shared_ptr<RaftLog>> entries,
                     unsigned long leaderCommit) {
+	LOG(Trace, "receive heart beat, curr term["+to_string(currTerm)+
+					"], receive term["+to_string(term)+"], ip["+ip+"], leaderCommit["+
+					to_string(leaderCommit)+"], prevLogIdx["+to_string(prevLogIdx)+
+					"], prevLogTerm["+to_string(prevLogTerm)+"]");
 	if (term < currTerm) {
 		return {currTerm, false};
 	}
@@ -162,6 +168,10 @@ Raft::appendEntries(unsigned long term, const string& ip, unsigned long prevLogI
 }
 
 tuple<int, bool> Raft::requestVote(unsigned long term, unsigned long lastLogIdx, unsigned long lastLogTerm) {
+	LOG(Info, "receive vote request, curr term["+to_string(currTerm)+
+				   "], receive term["+to_string(term)+
+				   "], lastLogIdx["+to_string(lastLogIdx)+
+				   "], lastLogTerm["+to_string(lastLogTerm)+"]");
 	if (term < currTerm) {
 		return {currTerm, false};
 	}
@@ -201,6 +211,7 @@ void Raft::replicate() {
 }
 
 void Raft::election() {
+	LOG(Info, "begin election, curr term["+to_string(currTerm)+"]");
 	++currTerm;
 	voteNum = 1;
 	int ms = rand() % (timeoutMax-timeoutMin) + timeoutMin;
@@ -220,6 +231,7 @@ void Raft::apply() {
 
 void Raft::sendAppendEntriesRpc(const string& address) {
 	auto curr = nextIdx[address];
+	LOG(Trace, "send heart beat to"+address+", curr term["+to_string(currTerm)+"], next idx["+to_string(curr->idx+1)+"]");
 	auto cmd = ObjPool::allocate<string>();
 	*cmd = "$appendEntries$"+to_string(currTerm)+"$"+hostIp+"$"+to_string(curr->idx)+"$"+to_string(curr->term)+"$";
 	auto log = ObjPool::allocate<string>();
@@ -238,6 +250,7 @@ void Raft::sendAppendEntriesRpc(const string& address) {
 }
 
 void Raft::sendRequestVoteRpc(const string& address) {
+	LOG(Info, "send request vote to"+address+", curr term["+to_string(currTerm)+"]");
 	auto cmd = ObjPool::allocate<string>();
 	*cmd += "$requestVote$"+to_string(currTerm)+"$"+to_string(last->idx)+"$"+to_string(last->term)+"$$";
 	auto session = raftServer->getSession();
@@ -303,6 +316,7 @@ void Raft::requestVoteReply(unsigned long term, bool success) {
 		if (success) {
 			++voteNum;
 			if (voteNum >= (clusterAddress.size()+1)/2+1) {
+				LOG(Info, "become leader, curr term["+to_string(currTerm)+"]");
 				state = Leader;
 				time = ObjPool::allocate<Time>(0, 0, 0, heartbeatTime, shared_from_this());
 				TimeSystem::receiveEvent(EventTimer, time);
