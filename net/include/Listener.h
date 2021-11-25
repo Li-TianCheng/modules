@@ -29,7 +29,7 @@ class Listener: public EventSystem {
 public:
     Listener();
     void registerListener(int port, AddressType addressType, shared_ptr<TcpServerBase> server);
-	void addNewSession(shared_ptr<TcpSession> session, const string& address, AddressType addressType);
+	bool addNewSession(shared_ptr<TcpSession> session, const string& address, AddressType addressType);
     void listen();
     ~Listener() override;
 private:
@@ -57,8 +57,6 @@ struct addListenerArg {
 
 struct addNewSessionArg {
     shared_ptr<EventSystem> listener;
-    string address;
-    AddressType addressType;
     shared_ptr<TcpSession> session;
 };
 

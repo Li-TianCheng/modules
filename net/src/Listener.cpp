@@ -207,42 +207,39 @@ void Listener::handleAddListener(shared_ptr<void> arg) {
 void Listener::handleAddSession(shared_ptr<void> arg) {
     auto _arg = static_pointer_cast<addNewSessionArg>(arg);
     auto session = _arg->session;
-    vector<string> split = utils::split(_arg->address, ':');
-    session->epollEvent.data.fd = socket(_arg->addressType, SOCK_STREAM, 0);
-    bzero(&session->address, sizeof(session->address));
-    if (_arg->addressType == IPV4) {
-        ((sockaddr_in*)(&session->address))->sin_family = PF_INET;
-        if ((inet_addr(split[0].data())) == INADDR_NONE) {
-            hostent* host = gethostbyname(split[0].data());
-            if (host == nullptr) {
-                return;
-            }
-            ((sockaddr_in*)(&session->address))->sin_addr = *(in_addr*)host->h_addr;
-        } else {
-            inet_pton(PF_INET, split[0].data(), &((sockaddr_in*)(&session->address))->sin_addr);
-        }
-        ((sockaddr_in*)(&session->address))->sin_port = htons(std::stoi(split[1]));
-    } else {
-        ((sockaddr_in6*)(&session->address))->sin6_family = PF_INET6;
-        inet_pton(PF_INET6, split[0].data(), &((sockaddr_in6*)(&session->address))->sin6_addr);
-        ((sockaddr_in6*)(&session->address))->sin6_port = htons(std::stoi(split[1]));
-        // TODO IPV6
-    }
-    int err = ::connect(session->epollEvent.data.fd, &session->address, sizeof(session->address));
-    if (err == -1) {
-		session->sessionInit();
-		session->sessionClear();
-        return;
-    }
     static_pointer_cast<Listener>(_arg->listener)->addNewSession(session);
 }
 
-void Listener::addNewSession(shared_ptr<TcpSession> session, const string &address, AddressType addressType) {
+bool Listener::addNewSession(shared_ptr<TcpSession> session, const string &address, AddressType addressType) {
+	vector<string> split = utils::split(address, ':');
+	session->epollEvent.data.fd = socket(addressType, SOCK_STREAM, 0);
+	bzero(&session->address, sizeof(session->address));
+	if (addressType == IPV4) {
+		((sockaddr_in*)(&session->address))->sin_family = PF_INET;
+		if ((inet_addr(split[0].data())) == INADDR_NONE) {
+			hostent* host = gethostbyname(split[0].data());
+			if (host == nullptr) {
+				return false;
+			}
+			((sockaddr_in*)(&session->address))->sin_addr = *(in_addr*)host->h_addr;
+		} else {
+			inet_pton(PF_INET, split[0].data(), &((sockaddr_in*)(&session->address))->sin_addr);
+		}
+		((sockaddr_in*)(&session->address))->sin_port = htons(std::stoi(split[1]));
+	} else {
+		((sockaddr_in6*)(&session->address))->sin6_family = PF_INET6;
+		inet_pton(PF_INET6, split[0].data(), &((sockaddr_in6*)(&session->address))->sin6_addr);
+		((sockaddr_in6*)(&session->address))->sin6_port = htons(std::stoi(split[1]));
+		// TODO IPV6
+	}
+	int err = ::connect(session->epollEvent.data.fd, &session->address, sizeof(session->address));
+	if (err == -1) {
+		return false;
+	}
 	auto arg = ObjPool::allocate<addNewSessionArg>();
 	arg->listener = shared_from_this();
 	arg->session = session;
-	arg->address = address;
-	arg->addressType = IPV4;
 	auto e = ObjPool::allocate<Event>(EventAddSession, arg);
 	receiveEvent(e);
+	return true;
 }
