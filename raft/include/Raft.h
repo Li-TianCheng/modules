@@ -56,18 +56,25 @@ public:
 	string isLeader();
 	string startCmd(const string& type, const string& cmd);
 	void registerFuncHandler(const string& type, void(*handler)(const string&));
+	void registerGenSnapshotHandler(string(*handler)());
+	void registerInstallSnapshotHandler(void(*handler)(const string&));
 	~Raft() override;
 private:
 	static void handleTimerTimeOut(shared_ptr<void> arg);
+	static void handleTickerTimeOut(shared_ptr<void> arg);
 	void replicate();
 	void election();
 	void apply();
 	void sendAppendEntriesRpc(const string& address);
 	void sendRequestVoteRpc(const string& address);
+	void sendInstallSnapshotRpc(const string& address);
 	tuple<unsigned long, bool> appendEntries(unsigned long term, const string& ip, unsigned long prevLogIdx, unsigned long prevLogTerm, vector<shared_ptr<RaftLog>> entries, unsigned long leaderCommit);
 	tuple<int, bool> requestVote(unsigned long term, unsigned long lastLogIdx, unsigned long lastLogTerm);
+	unsigned long installSnapshot(unsigned long term, const string& ip, unsigned long prevLogIdx, unsigned long prevLogTerm, const string& snapshot);
 	void appendEntriesReply(unsigned long term, bool success, const string& ip, shared_ptr<RaftLog> match);
 	void requestVoteReply(unsigned long term, bool success);
+	void installSnapshotReply(unsigned long term, const string& ip, shared_ptr<RaftLog> match);
+	void generateSnapshot();
 private:
 	friend class RaftSession;
 private:
@@ -81,12 +88,15 @@ private:
 	long logFileLen;
 	bool voted;
 	shared_ptr<Time> time;
+	shared_ptr<Time> snapshotTime;
 	shared_ptr<RaftLog> last;
 	shared_ptr<RaftLog> head;
 	shared_ptr<RaftLog> commit;
 	shared_ptr<RaftLog> lastApplied;
+	string(*genSnapshotHandler)();
+	void(*installSnapshotHandler)(const string&);
 	unordered_map<string, shared_ptr<RaftLog>> nextIdx;
-	unordered_map<string, shared_ptr<RaftLog>> matchIdx;
+	unordered_map<string, unsigned long> matchIdx;
 	unordered_map<string, void(*)(const string&)> funcHandler;
 	Mutex mutex;
 	Condition condition;

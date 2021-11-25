@@ -19,7 +19,7 @@ void RaftSession::handleReadDone(iter pos, size_t n) {
 		if (r != nullptr) {
 			if (split[0] == "appendEntries") {
 				unsigned long term = stoul(split[1]);
-				string leaderIp = split[2];
+				string leaderIp = std::move(split[2]);
 				unsigned long prevLogIdx = stoul(split[3]);
 				unsigned long prevLogTerm = stoul(split[4]);
 				vector<shared_ptr<RaftLog>> entries;
@@ -41,6 +41,16 @@ void RaftSession::handleReadDone(iter pos, size_t n) {
 				auto reply = ObjPool::allocate<string>();
 				*reply = "$requestVoteReply$"+ to_string(get<0>(res))+"$"+to_string(get<1>(res))+"$$";
 				write(reply);
+			} else if (split[0] == "installSnapshot") {
+				unsigned long term = stoul(split[1]);
+				string leaderIp = std::move(split[2]);
+				unsigned long prevLogIdx = stoul(split[3]);
+				unsigned long prevLogTerm = stoul(split[4]);
+				string snapshot = std::move(split[5]);
+				auto res = r->installSnapshot(term, leaderIp, prevLogIdx, prevLogTerm, snapshot);
+				auto reply = ObjPool::allocate<string>();
+				*reply = "$installSnapshotReply$"+to_string(res)+"$$";
+				write(reply);
 			} else if (split[0] == "appendEntriesReply") {
 				unsigned long term = stoul(split[1]);
 				bool success = stoi(split[2]);
@@ -50,6 +60,10 @@ void RaftSession::handleReadDone(iter pos, size_t n) {
 				unsigned long term = stoul(split[1]);
 				bool success = stoi(split[2]);
 				r->requestVoteReply(term, success);
+				closeConnection();
+			} else if (split[0] == "installSnapshotReply") {
+				unsigned long term = stoul(split[1]);
+				r->installSnapshotReply(term, ip, match);
 				closeConnection();
 			}
 		}
