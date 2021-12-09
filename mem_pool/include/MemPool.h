@@ -5,11 +5,12 @@
 #ifndef MEMPOOL_MEMPOOL_H
 #define MEMPOOL_MEMPOOL_H
 
-#include "ManageChunk.h"
-#include "../../my_pthread/include/Mutex.h"
 #include <vector>
 #include <unordered_map>
 #include <iostream>
+#include "ManageChunk.h"
+#include "my_pthread/include/RwLock.h"
+#include "my_pthread/include/Mutex.h"
 
 using std::vector;
 using std::unordered_map;
@@ -24,7 +25,7 @@ public:
     void* allocate(size_t size);
     void deallocate(void* ptr, size_t size);
 	void* allocateBuffer(size_t size);
-	void deallocateBuffer(void* ptr, size_t size);
+	void deallocateBuffer(void* ptr);
     ~MemPool();
     MemPool(const MemPool&) = delete;
     MemPool(MemPool&&) = delete;
@@ -33,8 +34,10 @@ public:
 private:
     vector<ManageChunk> mem;
     vector<Mutex> mutex;
-	Mutex bufferMutex;
+	RwLock bufferRwLock;
+	unordered_map<bufferChunk*, size_t> ptrToSize;
 	unordered_map<size_t, bufferChunk*> bufferMem;
+	unordered_map<size_t, Mutex> bufferMutex;
     int num;
 };
 

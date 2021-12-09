@@ -175,6 +175,12 @@ void EpollTask::writeTask(shared_ptr<void> arg) {
             if (temp.front().type == 2) {
                 sendNum = send(session->epollEvent.data.fd, static_pointer_cast<vector<unsigned char>>(temp.front().msg)->data()+temp.front().offset, temp.front().end-temp.front().offset, MSG_DONTWAIT);
             }
+	        if (temp.front().type == 3) {
+		        sendNum = send(session->epollEvent.data.fd, static_pointer_cast<char>(temp.front().msg).get()+temp.front().offset, temp.front().end-temp.front().offset, MSG_DONTWAIT);
+	        }
+	        if (temp.front().type == 4) {
+		        sendNum = send(session->epollEvent.data.fd, static_pointer_cast<unsigned char>(temp.front().msg).get()+temp.front().offset, temp.front().end-temp.front().offset, MSG_DONTWAIT);
+	        }
             if (sendNum <= 0) {
                 if (errno == EAGAIN) {
                     session->mutex.lock();

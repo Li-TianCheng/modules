@@ -4,7 +4,7 @@
 
 #include "net/include/Listener.h"
 
-Listener::Listener() : waitTime(1), waitCLose(nullptr),
+Listener::Listener() : waitTime(1), waitCLose(nullptr), count(0),
                         epollSessionNum(ConfigSystem::getConfig()["system"]["net"]["listener"]["epoll_session_num"].asInt()),
                         maxEpollNum(ConfigSystem::getConfig()["system"]["net"]["listener"]["max_epoll_task_num"].asInt()) {
     signal(SIGPIPE, SIG_IGN);
@@ -53,7 +53,11 @@ void Listener::listen() {
         int num = epoll_wait(epollFd, events, listenMap.size(), waitTime);
         if (num <= 0) {
             waitTime = 1;
-            addNewSession(nullptr);
+	        ++count;
+			if (count == 10000) {
+				addNewSession(nullptr);
+				count = 0;
+			}
         } else {
             waitTime = 0;
             for (int i = 0; i < num; i++) {
@@ -121,7 +125,7 @@ void Listener::handleCloseListener(shared_ptr<void> arg) {
 		::shutdown(server->serverFd, SHUT_RD);
 		::close(server->serverFd);
 		listener->listenMap.erase(server->serverFd);
-		LOG(Info, "port:"+std::to_string(server->port)+" listen end");
+		LOG(Info, "port:"+std::to_string(server->port)+" listen idx");
 	}
 }
 

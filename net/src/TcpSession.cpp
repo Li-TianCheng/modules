@@ -46,6 +46,43 @@ void TcpSession::write(shared_ptr<string> sendMsg, size_t offset, size_t end) {
     epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent);
 }
 
+void TcpSession::write(shared_ptr<char> sendMsg, size_t offset, size_t end) {
+	if (isCloseConnection || sendMsg == nullptr) {
+		return;
+	}
+	isWriteDone = false;
+	mutex.lock();
+	msgQueue.emplace_back(sendMsg, offset, end);
+	epollEvent.events |= Write;
+	mutex.unlock();
+	epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent);
+}
+
+void TcpSession::write(shared_ptr<unsigned char> sendMsg, size_t offset, size_t end) {
+	if (isCloseConnection || sendMsg == nullptr) {
+		return;
+	}
+	isWriteDone = false;
+	mutex.lock();
+	msgQueue.emplace_back(sendMsg, offset, end);
+	epollEvent.events |= Write;
+	mutex.unlock();
+	epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent);
+}
+
+void TcpSession::write(Buffer& buffer) {
+	size_t curr = 0;
+	for (auto& b : buffer.buffer) {
+		if (curr+buffer.bufferChunkSize <= buffer.writeIndex) {
+			write(b, 0, buffer.bufferChunkSize);
+		} else {
+			write(b, 0, buffer.writeIndex-curr);
+			break;
+		}
+		curr += buffer.bufferChunkSize;
+	}
+}
+
 void TcpSession::closeConnection() {
     isCloseConnection = true;
     auto e = ObjPool::allocate<Event>(EventCloseConnection, shared_from_this());
@@ -129,5 +166,17 @@ void TcpSession::copy(const iter &begin, size_t n, vector<char>& buff) {
 
 void TcpSession::copy(const iter &begin, size_t n, vector<unsigned char>& buff) {
     readBuffer.copy(begin, n, buff);
+}
+
+void TcpSession::copy(const iter& begin, size_t n, char* buff) {
+	readBuffer.copy(begin, n, buff);
+}
+
+void TcpSession::copy(const iter& begin, size_t n, unsigned char* buff) {
+	readBuffer.copy(begin, n, buff);
+}
+
+void TcpSession::copy(const iter& begin, size_t n, Buffer& buff) {
+	readBuffer.copy(begin, n, buff);
 }
 

@@ -19,24 +19,34 @@ using std::vector;
 using std::shared_ptr;
 
 struct iter;
+class TcpSession;
 
 class Buffer {
 public:
-    explicit Buffer(int bufferChunkSize);
+    explicit Buffer(int bufferChunkSize=8*1024);
     iter getReadPos();
     size_t getMsgNum();
-    void write(const char* c, size_t n);
+	void insert(const unsigned char* c, size_t len);
+	void insert(Buffer& buff, size_t begin, size_t end);
+	void push_back(unsigned char c);
+	unsigned char& operator[](size_t index);
+	void swap(Buffer& buff);
+	void clear();
+	size_t size() const;
     void copy(const iter& begin, size_t n, string& buff);
     void copy(const iter& begin, size_t n, vector<char>& buff);
     void copy(const iter& begin, size_t n, vector<unsigned char>& buff);
+	void copy(const iter& begin, size_t n, char* buff);
+	void copy(const iter& begin, size_t n, unsigned char* buff);
+	void copy(const iter& begin, size_t n, Buffer& buff);
     void readDone(size_t n);
     int readFromFd(int fd);
-    int writeToFd(int fd);
-    ~Buffer();
+    ~Buffer() = default;
 private:
+	friend class TcpSession;
     void shrink();
 private:
-    deque<char*> buffer;
+    deque<shared_ptr<unsigned char>> buffer;
     size_t readIndex;
     size_t writeIndex;
     int bufferChunkSize;
@@ -44,7 +54,7 @@ private:
 
 struct iter {
 public:
-    iter(int bufferChunkSize, deque<char*>* buffer, size_t readIndex) : bufferChunkSize(bufferChunkSize), buffer(buffer), readIndex(readIndex){}
+    iter(int bufferChunkSize, deque<shared_ptr<unsigned char>>* buffer, size_t readIndex) : bufferChunkSize(bufferChunkSize), buffer(buffer), readIndex(readIndex){}
     iter& operator++(){
         readIndex++;
         return *this;
@@ -87,12 +97,12 @@ public:
         it.readIndex -= n;
         return it;
     };
-    char& operator*() const{
-        return (*buffer)[readIndex/bufferChunkSize][readIndex % bufferChunkSize];
+	unsigned char& operator*() const{
+        return (*buffer)[readIndex/bufferChunkSize].get()[readIndex % bufferChunkSize];
     }
 private:
     friend class Buffer;
-    deque<char*>* buffer;
+    deque<shared_ptr<unsigned char>>* buffer;
     size_t readIndex;
     int bufferChunkSize;
 };

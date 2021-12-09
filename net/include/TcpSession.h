@@ -19,21 +19,27 @@ struct Msg {
     size_t offset;
     size_t end;
     shared_ptr<void> msg;
-    explicit Msg(shared_ptr<string> msg, size_t offset, size_t end) : type(0), msg(msg), offset(offset), end(end) {
+    Msg(shared_ptr<string> msg, size_t offset, size_t end) : type(0), msg(msg), offset(offset), end(end) {
         if (end == -1) {
             this->end = msg->size();
         }
     }
-    explicit Msg(shared_ptr<vector<char>> msg, size_t offset, size_t end) : type(1), msg(msg), offset(offset), end(end) {
+    Msg(shared_ptr<vector<char>> msg, size_t offset, size_t end) : type(1), msg(msg), offset(offset), end(end) {
         if (end == -1) {
             this->end = msg->size();
         }
     }
-    explicit Msg(shared_ptr<vector<unsigned char>> msg, size_t offset, size_t end) : type(2), msg(msg), offset(offset), end(end) {
+    Msg(shared_ptr<vector<unsigned char>> msg, size_t offset, size_t end) : type(2), msg(msg), offset(offset), end(end) {
         if (end == -1) {
             this->end = msg->size();
         }
     }
+	Msg(shared_ptr<char> msg, size_t offset, size_t end) : type(3), msg(msg), offset(offset), end(end) {
+
+	}
+	Msg(shared_ptr<unsigned char> msg, size_t offset, size_t end) : type(4), msg(msg), offset(offset), end(end) {
+
+	}
 };
 
 class TcpSession: public std::enable_shared_from_this<TcpSession> {
@@ -42,9 +48,15 @@ public:
     void write(shared_ptr<vector<char>> sendMsg, size_t offset=0, size_t end=-1);
     void write(shared_ptr<vector<unsigned char>> sendMsg, size_t offset=0, size_t end=-1);
     void write(shared_ptr<string> sendMsg, size_t offset=0, size_t end=-1);
+	void write(shared_ptr<char> sendMsg, size_t offset, size_t end);
+	void write(shared_ptr<unsigned char> sendMsg, size_t offset, size_t end);
+	void write(Buffer& buffer);
     void copy(const iter& begin, size_t n, string& buff);
     void copy(const iter& begin, size_t n, vector<char>& buff);
     void copy(const iter& begin, size_t n, vector<unsigned char>& buff);
+	void copy(const iter& begin, size_t n, char* buff);
+	void copy(const iter& begin, size_t n, unsigned char* buff);
+	void copy(const iter& begin, size_t n, Buffer& buff);
     void closeConnection();
     void closeListen();
     void deleteSession();

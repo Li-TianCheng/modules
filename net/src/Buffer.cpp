@@ -3,10 +3,10 @@
 //
 
 #include "net/include/Buffer.h"
-
+#include "TcpSession.h"
 
 Buffer::Buffer(int bufferChunkSize) : bufferChunkSize(bufferChunkSize), buffer(1), readIndex(0), writeIndex(0) {
-	buffer[0] = (char*)ObjPool::allocateBuffer(bufferChunkSize);
+	buffer[0] = ObjPool::allocateBuffer<unsigned char>(bufferChunkSize);
 }
 
 iter Buffer::getReadPos() {
@@ -15,16 +15,6 @@ iter Buffer::getReadPos() {
 
 size_t Buffer::getMsgNum() {
     return writeIndex - readIndex;
-}
-
-void Buffer::write(const char* c, size_t n) {
-    for (int i = 0; i < n; i++) {
-        if (writeIndex == bufferChunkSize * buffer.size()) {
-            buffer.push_back((char*)ObjPool::allocateBuffer(bufferChunkSize));
-        }
-        buffer[writeIndex/bufferChunkSize][writeIndex%bufferChunkSize] = *(c+i);
-        writeIndex++;
-    }
 }
 
 void Buffer::readDone(size_t n) {
@@ -40,10 +30,10 @@ void Buffer::readDone(size_t n) {
 int Buffer::readFromFd(int fd) {
     while (true) {
         if (writeIndex == bufferChunkSize * buffer.size()) {
-            buffer.push_back((char*)ObjPool::allocateBuffer(bufferChunkSize));
+            buffer.push_back(ObjPool::allocateBuffer<unsigned char>(bufferChunkSize));
         }
         size_t size = bufferChunkSize - writeIndex % bufferChunkSize;
-        ssize_t recvNum = ::recv(fd, buffer[writeIndex/bufferChunkSize]+writeIndex%bufferChunkSize, size, MSG_DONTWAIT);
+        ssize_t recvNum = ::recv(fd, buffer[writeIndex/bufferChunkSize].get()+writeIndex%bufferChunkSize, size, MSG_DONTWAIT);
         if (recvNum <= 0) {
             if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
                 return 0;
@@ -53,27 +43,6 @@ int Buffer::readFromFd(int fd) {
         }
         writeIndex += recvNum;
     }
-}
-
-int Buffer::writeToFd(int fd) {
-    while (readIndex < writeIndex) {
-        size_t size = std::min(bufferChunkSize-readIndex%bufferChunkSize, writeIndex-readIndex);
-        ssize_t sendNum = ::send(fd, buffer[readIndex/bufferChunkSize] + readIndex % bufferChunkSize, size, MSG_DONTWAIT);
-        if (sendNum <= 0) {
-            if (errno == EAGAIN) {
-                shrink();
-                return 1;
-            } else {
-                shrink();
-                return -1;
-            }
-        }
-        readIndex += sendNum;
-    }
-    readIndex = 0;
-    writeIndex = 0;
-    shrink();
-    return 0;
 }
 
 void Buffer::shrink() {
@@ -87,18 +56,11 @@ void Buffer::shrink() {
         return;
     }
     if ((buffer.size()-2)*bufferChunkSize > writeIndex) {
-	    ObjPool::deallocateBuffer(buffer.back(), bufferChunkSize);
         buffer.pop_back();
     } else {
         return;
     }
     shrink();
-}
-
-Buffer::~Buffer() {
-    for (auto& c : buffer) {
-		ObjPool::deallocateBuffer(c, bufferChunkSize);
-    }
 }
 
 void Buffer::copy(const iter &begin, size_t n, string& buff) {
@@ -107,7 +69,7 @@ void Buffer::copy(const iter &begin, size_t n, string& buff) {
     while (total < n) {
         size_t remaining = bufferChunkSize - curr % bufferChunkSize;
         size_t inc = remaining < n-total ? remaining : n-total;
-        buff.insert(buff.end(), buffer[curr/bufferChunkSize]+(curr%bufferChunkSize), buffer[curr/bufferChunkSize]+(curr%bufferChunkSize)+inc);
+        buff.insert(buff.end(), buffer[curr/bufferChunkSize].get()+(curr%bufferChunkSize), buffer[curr/bufferChunkSize].get()+(curr%bufferChunkSize)+inc);
         total += inc;
         curr += inc;
     }
@@ -119,7 +81,7 @@ void Buffer::copy(const iter &begin, size_t n, vector<char>& buff) {
     while (total < n) {
         size_t remaining = bufferChunkSize - curr % bufferChunkSize;
         size_t inc = remaining < n-total ? remaining : n-total;
-        buff.insert(buff.end(), buffer[curr/bufferChunkSize]+(curr%bufferChunkSize), buffer[curr/bufferChunkSize]+(curr%bufferChunkSize)+inc);
+        buff.insert(buff.end(), buffer[curr/bufferChunkSize].get()+(curr%bufferChunkSize), buffer[curr/bufferChunkSize].get()+(curr%bufferChunkSize)+inc);
         total += inc;
         curr += inc;
     }
@@ -131,8 +93,95 @@ void Buffer::copy(const iter &begin, size_t n, vector<unsigned char>& buff) {
     while (total < n) {
         size_t remaining = bufferChunkSize - curr % bufferChunkSize;
         size_t inc = remaining < n-total ? remaining : n-total;
-        buff.insert(buff.end(), buffer[curr/bufferChunkSize]+(curr%bufferChunkSize), buffer[curr/bufferChunkSize]+(curr%bufferChunkSize)+inc);
+        buff.insert(buff.end(), buffer[curr/bufferChunkSize].get()+(curr%bufferChunkSize), buffer[curr/bufferChunkSize].get()+(curr%bufferChunkSize)+inc);
         total += inc;
         curr += inc;
     }
+}
+
+void Buffer::copy(const iter& begin, size_t n, char* buff) {
+	size_t total = 0;
+	size_t curr = begin.readIndex;
+	while (total < n) {
+		size_t remaining = bufferChunkSize - curr % bufferChunkSize;
+		size_t inc = remaining < n-total ? remaining : n-total;
+		memcpy(buff, buffer[curr/bufferChunkSize].get()+(curr%bufferChunkSize), inc);
+		total += inc;
+		curr += inc;
+	}
+}
+
+void Buffer::copy(const iter& begin, size_t n, unsigned char* buff) {
+	size_t total = 0;
+	size_t curr = begin.readIndex;
+	while (total < n) {
+		size_t remaining = bufferChunkSize - curr % bufferChunkSize;
+		size_t inc = remaining < n-total ? remaining : n-total;
+		memcpy(buff, buffer[curr/bufferChunkSize].get()+(curr%bufferChunkSize), inc);
+		total += inc;
+		curr += inc;
+	}
+}
+
+void Buffer::copy(const iter& begin, size_t n, Buffer& buff) {
+	buff.insert(*this, begin.readIndex, begin.readIndex+n);
+}
+
+void Buffer::insert(const unsigned char *c, size_t len) {
+	size_t curr = 0;
+	while (true) {
+		if (writeIndex == buffer.size()*bufferChunkSize) {
+			buffer.push_back(ObjPool::allocateBuffer<unsigned char>(bufferChunkSize));
+		}
+		size_t remain = bufferChunkSize-writeIndex%bufferChunkSize;
+		if (remain >= len) {
+			memcpy(buffer[writeIndex/bufferChunkSize].get()+writeIndex%bufferChunkSize, c+curr, len);
+			writeIndex += len;
+			break;
+		} else {
+			memcpy(buffer[writeIndex/bufferChunkSize].get()+writeIndex%bufferChunkSize, c+curr, remain);
+			curr += remain;
+			len -= remain;
+			writeIndex += remain;
+		}
+	}
+}
+
+void Buffer::insert(Buffer &buff, size_t begin, size_t end) {
+	size_t curr = begin;
+	while (true) {
+		if (curr / buff.bufferChunkSize == end / buff.bufferChunkSize) {
+			insert(buff.buffer[curr/buff.bufferChunkSize].get()+curr%buff.bufferChunkSize, end-curr);
+			break;
+		} else {
+			insert(buff.buffer[curr/buff.bufferChunkSize].get()+curr%buff.bufferChunkSize, (curr/buff.bufferChunkSize+1)*buff.bufferChunkSize-curr);
+			curr = (curr/buff.bufferChunkSize+1)*buff.bufferChunkSize;
+		}
+	}
+}
+
+void Buffer::push_back(unsigned char c) {
+	if (writeIndex == buffer.size()*bufferChunkSize) {
+		buffer.push_back(ObjPool::allocateBuffer<unsigned char>(bufferChunkSize));
+	}
+	buffer[writeIndex/bufferChunkSize].get()[writeIndex%bufferChunkSize] = c;
+	++writeIndex;
+}
+
+unsigned char &Buffer::operator[](size_t index) {
+	return buffer[index/bufferChunkSize].get()[index%bufferChunkSize];
+}
+
+void Buffer::swap(Buffer &buff) {
+	std::swap(bufferChunkSize, buff.bufferChunkSize);
+	std::swap(writeIndex, buff.writeIndex);
+	buffer.swap(buff.buffer);
+}
+
+void Buffer::clear() {
+	writeIndex = 0;
+}
+
+size_t Buffer::size() const {
+	return writeIndex;
 }

@@ -39,6 +39,7 @@ private:
     void cycleInit() override;
     void addNewSession(shared_ptr<TcpSession> session);
 private:
+	int count;
     int epollFd;
     int waitTime;
     int maxEpollNum;
