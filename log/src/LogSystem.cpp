@@ -25,7 +25,7 @@ void LogSystem::close() {
 
 void LogSystem::log(LogRank rank, string &&str) {
     if (rank >= LogSystem::rank) {
-        getLog()->log(logString[rank]+" "+getTime()+" "+std::forward<string>(str));
+        getLog()->log(logString[rank]+" "+getTime()+" "+std::move(str));
     }
 }
 

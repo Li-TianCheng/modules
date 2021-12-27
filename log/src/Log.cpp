@@ -10,7 +10,7 @@ Log::Log(const string &path) {
 
 void Log::log(string &&log) {
     mutex.lock();
-    logQueue.push(std::forward<string>(log));
+    logQueue.push(std::move(log));
     mutex.unlock();
 }
 
