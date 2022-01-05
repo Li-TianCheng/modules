@@ -236,6 +236,8 @@ bool Listener::addNewSession(shared_ptr<TcpSession> session, const string &addre
 		((sockaddr_in6*)(&session->address))->sin6_port = htons(std::stoi(split[1]));
 		// TODO IPV6
 	}
+	timeval timeout{0, 1000*50};
+	setsockopt(session->epollEvent.data.fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
 	int err = ::connect(session->epollEvent.data.fd, &session->address, sizeof(session->address));
 	if (err == -1) {
 		return false;

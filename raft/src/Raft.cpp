@@ -61,7 +61,7 @@ void Raft::serve() {
 			log->prev = last;
 			last = last->next;
 		} else {
-			truncate(logPath.data(), logFileLen);
+			int re = truncate(logPath.data(), logFileLen);
 			break;
 		}
 	}
@@ -134,12 +134,8 @@ Raft::appendEntries(unsigned long term, const string& ip, unsigned long prevLogI
 		return {currTerm, false};
 	}
 	mutex.lock();
-	currTerm = term;
+	convertToFollower(term);
 	leaderIp = ip;
-	state = Follower;
-	int ms = rand() % (timeoutMax-timeoutMin) + timeoutMin;
-	time = ObjPool::allocate<Time>(0, 0, 0, ms, shared_from_this());
-	TimeSystem::receiveEvent(EventTimer, time);
 	if (prevLogIdx > last->idx) {
 		condition.notifyAll(mutex);
 		return {currTerm, false};
@@ -158,7 +154,7 @@ Raft::appendEntries(unsigned long term, const string& ip, unsigned long prevLogI
 						logFileLen -= ((string)*tmp).size()+1;
 						tmp = t;
 					}
-					truncate(logPath.data(), logFileLen);
+					int re = truncate(logPath.data(), logFileLen);
 					curr->next = e;
 					e->prev = curr;
 					logFileLen += ((string)*e).size()+1;
@@ -188,7 +184,7 @@ Raft::appendEntries(unsigned long term, const string& ip, unsigned long prevLogI
 			logFileLen -= ((string)*tmp).size()+1;
 			last = tmp;
 		}
-		truncate(logPath.data(), logFileLen);
+		int re = truncate(logPath.data(), logFileLen);
 		last->next = nullptr;
 		condition.notifyAll(mutex);
 		return {currTerm, false};
@@ -205,12 +201,7 @@ tuple<int, bool> Raft::requestVote(unsigned long term, unsigned long lastLogIdx,
 	}
 	mutex.lock();
 	if (term > currTerm) {
-		state = Follower;
-		currTerm = term;
-		voted = false;
-		int ms = rand() % (timeoutMax-timeoutMin) + timeoutMin;
-		time = ObjPool::allocate<Time>(0, 0, 0, ms, shared_from_this());
-		TimeSystem::receiveEvent(EventTimer, time);
+		convertToFollower(term);
 	}
 	if (!voted && lastLogTerm >= last->term && lastLogIdx >= last->idx) {
 		voted = true;
@@ -238,12 +229,8 @@ unsigned long Raft::installSnapshot(unsigned long term, const string& ip, unsign
 		return currTerm;
 	}
 	mutex.lock();
-	currTerm = term;
-	state = Follower;
+	convertToFollower(term);
 	leaderIp = ip;
-	int ms = rand() % (timeoutMax-timeoutMin) + timeoutMin;
-	time = ObjPool::allocate<Time>(0, 0, 0, ms, shared_from_this());
-	TimeSystem::receiveEvent(EventTimer, time);
 	head->next = nullptr;
 	head->idx = prevLogIdx;
 	head->term = prevLogTerm;
@@ -269,7 +256,8 @@ void Raft::election() {
 	LOG(Info, "begin election, curr term["+to_string(currTerm)+"]");
 	++currTerm;
 	voteNum = 1;
-	int ms = rand() % (timeoutMax-timeoutMin) + timeoutMin;
+	voted = true;
+	int ms = rand() % (timeoutMax-timeoutMin) + timeoutMin;;
 	time = ObjPool::allocate<Time>(0, 0, 0, ms, shared_from_this());
 	TimeSystem::receiveEvent(EventTimer, time);
 	for (auto& address : clusterAddress) {
@@ -286,7 +274,7 @@ void Raft::apply() {
 
 void Raft::sendAppendEntriesRpc(const string& address) {
 	auto curr = nextIdx[address];
-	LOG(Trace, "send heart beat to"+address+", curr term["+to_string(currTerm)+"], next idx["+to_string(curr->idx+1)+"]");
+	LOG(Trace, "send heart beat to "+address+", curr term["+to_string(currTerm)+"], next idx["+to_string(curr->idx+1)+"]");
 	auto cmd = ObjPool::allocate<string>();
 	*cmd = "$appendEntries$"+to_string(currTerm)+"$"+hostIp+"$"+to_string(curr->idx)+"$"+to_string(curr->term)+"$";
 	auto log = ObjPool::allocate<string>();
@@ -305,7 +293,7 @@ void Raft::sendAppendEntriesRpc(const string& address) {
 }
 
 void Raft::sendRequestVoteRpc(const string& address) {
-	LOG(Info, "send request vote to"+address+", curr term["+to_string(currTerm)+"]");
+	LOG(Info, "send request vote to "+address+", curr term["+to_string(currTerm)+"]");
 	auto cmd = ObjPool::allocate<string>();
 	*cmd += "$requestVote$"+to_string(currTerm)+"$"+to_string(last->idx)+"$"+to_string(last->term)+"$$";
 	auto session = raftServer->getSession();
@@ -315,7 +303,7 @@ void Raft::sendRequestVoteRpc(const string& address) {
 }
 
 void Raft::sendInstallSnapshotRpc(const string &address) {
-	LOG(Info, "send install snapshot to"+address+", curr term["+to_string(currTerm)+"]");
+	LOG(Info, "send install snapshot to "+address+", curr term["+to_string(currTerm)+"]");
 	auto cmd = ObjPool::allocate<string>();
 	std::fstream snapshotFile;
 	snapshotFile.open(snapshotPath, std::ios::in);
@@ -362,11 +350,7 @@ void Raft::handleTickerTimeOut(shared_ptr<void> arg) {
 void Raft::appendEntriesReply(unsigned long term, bool success, const string &ip, shared_ptr<RaftLog> match) {
 	mutex.lock();
 	if (term > currTerm) {
-		currTerm = term;
-		state = Follower;
-		int ms = rand() % (timeoutMax-timeoutMin) + timeoutMin;
-		time = ObjPool::allocate<Time>(0, 0, 0, ms, shared_from_this());
-		TimeSystem::receiveEvent(EventTimer, time);
+		convertToFollower(term);
 	} else if (state == Leader && term == currTerm){
 		if (success) {
 			if (match->idx > matchIdx[ip]) {
@@ -401,11 +385,7 @@ void Raft::appendEntriesReply(unsigned long term, bool success, const string &ip
 void Raft::requestVoteReply(unsigned long term, bool success) {
 	mutex.lock();
 	if (term > currTerm) {
-		currTerm = term;
-		state = Follower;
-		int ms = rand() % (timeoutMax-timeoutMin) + timeoutMin;
-		time = ObjPool::allocate<Time>(0, 0, 0, ms, shared_from_this());
-		TimeSystem::receiveEvent(EventTimer, time);
+		convertToFollower(term);
 	} else if (state == Candidate && term == currTerm) {
 		if (success) {
 			++voteNum;
@@ -428,11 +408,7 @@ void Raft::requestVoteReply(unsigned long term, bool success) {
 void Raft::installSnapshotReply(unsigned long term, const string& ip, shared_ptr<RaftLog> match) {
 	mutex.lock();
 	if (term > currTerm) {
-		currTerm = term;
-		state = Follower;
-		int ms = rand() % (timeoutMax-timeoutMin) + timeoutMin;
-		time = ObjPool::allocate<Time>(0, 0, 0, ms, shared_from_this());
-		TimeSystem::receiveEvent(EventTimer, time);
+		convertToFollower(term);
 	} else if (state == Leader && term == currTerm) {
 		if (match->idx == head->idx) {
 			if (match->idx > matchIdx[ip]) {
@@ -498,7 +474,7 @@ void Raft::generateSnapshot() {
 	snapshotFile << "$$" << endl;
 	snapshotFile.close();
 	logFileLen = 0;
-	truncate(logPath.data(), logFileLen);
+	int re = truncate(logPath.data(), logFileLen);
 	auto curr = head;
 	while (curr->next != nullptr) {
 		curr = curr->next;
@@ -507,5 +483,14 @@ void Raft::generateSnapshot() {
 		logFile << (string)*curr << endl;
 	}
 	logFile.flush();
+}
+
+void Raft::convertToFollower(unsigned long term) {
+	currTerm = term;
+	state = Follower;
+	voted = false;
+	int ms = rand() % (timeoutMax-timeoutMin) + timeoutMin;
+	time = ObjPool::allocate<Time>(0, 0, 0, ms, shared_from_this());
+	TimeSystem::receiveEvent(EventTimer, time);
 }
 

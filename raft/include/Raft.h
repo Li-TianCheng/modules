@@ -75,6 +75,7 @@ private:
 	void requestVoteReply(unsigned long term, bool success);
 	void installSnapshotReply(unsigned long term, const string& ip, shared_ptr<RaftLog> match);
 	void generateSnapshot();
+	void convertToFollower(unsigned long term);
 private:
 	friend class RaftSession;
 private:
