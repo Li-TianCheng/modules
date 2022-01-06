@@ -12,14 +12,14 @@ void TcpSession::write(shared_ptr<vector<char>> sendMsg, size_t offset, size_t e
     if (isCloseConnection || sendMsg == nullptr || (*sendMsg).empty() || offset >= sendMsg->size()) {
         return;
     }
-    mutex.lock();
+    lock.lock();
     msgQueue.emplace_back(sendMsg, offset, end);
     if (isWriteDone) {
         epollEvent.events |= Write;
         epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent);
     }
     isWriteDone = false;
-    mutex.unlock();
+    lock.unlock();
 }
 
 void TcpSession::write(shared_ptr<vector<unsigned char>> sendMsg, size_t offset, size_t end) {
@@ -27,10 +27,10 @@ void TcpSession::write(shared_ptr<vector<unsigned char>> sendMsg, size_t offset,
         return;
     }
     isWriteDone = false;
-    mutex.lock();
+    lock.lock();
     msgQueue.emplace_back(sendMsg, offset, end);
     epollEvent.events |= Write;
-    mutex.unlock();
+    lock.unlock();
     epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent);
 }
 
@@ -39,10 +39,10 @@ void TcpSession::write(shared_ptr<string> sendMsg, size_t offset, size_t end) {
         return;
     }
     isWriteDone = false;
-    mutex.lock();
+    lock.lock();
     msgQueue.emplace_back(sendMsg, offset, end);
     epollEvent.events |= Write;
-    mutex.unlock();
+    lock.unlock();
     epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent);
 }
 
@@ -51,10 +51,10 @@ void TcpSession::write(shared_ptr<char> sendMsg, size_t offset, size_t end) {
 		return;
 	}
 	isWriteDone = false;
-	mutex.lock();
+	lock.lock();
 	msgQueue.emplace_back(sendMsg, offset, end);
 	epollEvent.events |= Write;
-	mutex.unlock();
+	lock.unlock();
 	epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent);
 }
 
@@ -63,10 +63,10 @@ void TcpSession::write(shared_ptr<unsigned char> sendMsg, size_t offset, size_t 
 		return;
 	}
 	isWriteDone = false;
-	mutex.lock();
+	lock.lock();
 	msgQueue.emplace_back(sendMsg, offset, end);
 	epollEvent.events |= Write;
-	mutex.unlock();
+	lock.unlock();
 	epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent);
 }
 

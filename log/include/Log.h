@@ -14,6 +14,7 @@
 #include <vector>
 #include <atomic>
 #include "resource/include/ResourceSystem.h"
+#include "my_pthread/include/SpinLock.h"
 
 using std::string;
 using std::queue;
@@ -59,7 +60,7 @@ private:
     friend class LogSystem;
 private:
     std::ofstream file;
-    Mutex mutex;
+	SpinLock lock;
     queue<string> logQueue;
 };
 

@@ -154,12 +154,12 @@ void EpollTask::writeTask(shared_ptr<void> arg) {
     log << "session[" << session << "] writeTask start";
     LOG(Info, log.str());
     deque<Msg> temp;
-    session->mutex.lock();
+    session->lock.lock();
     while (!session->msgQueue.empty()) {
         temp.push_back(std::move(session->msgQueue.front()));
         session->msgQueue.pop_front();
     }
-    session->mutex.unlock();
+    session->lock.unlock();
     while (!temp.empty()) {
         while (true) {
             ssize_t sendNum;
@@ -183,12 +183,12 @@ void EpollTask::writeTask(shared_ptr<void> arg) {
 	        }
             if (sendNum <= 0) {
                 if (errno == EAGAIN) {
-                    session->mutex.lock();
+                    session->lock.lock();
                     while (!temp.empty()) {
                         session->msgQueue.push_front(std::move(temp.back()));
                         temp.pop_back();
                     }
-                    session->mutex.unlock();
+                    session->lock.unlock();
                     session->isWrite = false;
                     epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
                     std::ostringstream log;
@@ -208,12 +208,12 @@ void EpollTask::writeTask(shared_ptr<void> arg) {
         }
         temp.pop_front();
     }
-    session->mutex.lock();
+    session->lock.lock();
     if (session->msgQueue.empty()) {
         session->isWriteDone = true;
         session->epollEvent.events &= ~Write;
     }
-    session->mutex.unlock();
+    session->lock.unlock();
     if (session->isCloseConnection) {
         auto e = ObjPool::allocate<Event>(EventCloseConnection, session);
 	    auto epoll = session->epoll.lock();

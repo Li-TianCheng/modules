@@ -6,7 +6,7 @@
 
 ResourceManager::ResourceManager() {
     registerEvent(EventIncrease, handleIncrease);
-    registerEvent(EventDecrease, handleIncrease);
+    registerEvent(EventDecrease, handleDecrease);
     registerEvent(EventTickerTimeOut, handleTimeOut);
     registerEvent(EventRegisterResource, handleRegisterResource);
     registerEvent(EventUnregisterResource, handleUnregisterResource);

@@ -4,7 +4,7 @@
 
 #include "MemPool.h"
 
-MemPool::MemPool(int num):mutex(126), num(num){
+MemPool::MemPool(int num): lock(126), num(num){
     for (int i = 0; i < 128; i++){
         mem.emplace_back(4+i*4, num);
     }
@@ -18,9 +18,9 @@ void* MemPool::allocate(size_t size) {
         }
         return ptr;
     }
-    mutex[(size-4)/4].lock();
+    lock[(size - 4) / 4].lock();
     void* ptr = mem[(size-4)/4].allocate(num);
-    mutex[(size-4)/4].unlock();
+    lock[(size - 4) / 4].unlock();
     return ptr;
 }
 
@@ -29,17 +29,17 @@ void MemPool::deallocate(void *ptr, size_t size) {
         ::free(ptr);
         return;
     }
-    mutex[(size-4)/4].lock();
+    lock[(size - 4) / 4].lock();
     mem[(size-4)/4].deallocate(ptr, num);
-    mutex[(size-4)/4].unlock();
+    lock[(size - 4) / 4].unlock();
 }
 
 void* MemPool::allocateBuffer(size_t size) {
 	bufferChunk* m;
 	bufferRwLock.rdLock();
-	Mutex& mtx = bufferMutex[size];
+	auto& lck = bufferLock[size];
 	bufferRwLock.unlock();
-	mtx.lock();
+	lck.lock();
 	if (bufferMem.find(size) == bufferMem.end()) {
 		bufferMem[size] = nullptr;
 	}
@@ -52,19 +52,19 @@ void* MemPool::allocateBuffer(size_t size) {
 		m = bufferMem[size];
 		bufferMem[size] = m->next;
 	}
-	mtx.unlock();
+	lck.unlock();
 	return m;
 }
 
 void MemPool::deallocateBuffer(void* ptr) {
 	bufferRwLock.rdLock();
 	size_t size = ptrToSize[(bufferChunk*)ptr];
-	Mutex& mtx = bufferMutex[size];
+	auto& lck = bufferLock[size];
 	bufferRwLock.unlock();
-	mtx.lock();
+	lck.lock();
 	((bufferChunk*)ptr)->next = bufferMem[size];
 	bufferMem[size] = (bufferChunk*)ptr;
-	mtx.unlock();
+	lck.unlock();
 }
 
 MemPool::~MemPool() {

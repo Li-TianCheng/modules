@@ -13,6 +13,7 @@
 #include "TcpServerBase.h"
 #include "time_system/include/Time.h"
 #include "time_system/include/TimeSystem.h"
+#include "my_pthread/include/SpinLock.h"
 
 struct Msg {
     int type;
@@ -81,7 +82,7 @@ protected:
     std::atomic<bool> isClose;
     std::atomic<bool> isWriteDone;
     deque<Msg> msgQueue;
-    Mutex mutex;
+	SpinLock lock;
     weak_ptr<EventSystem> epoll;
 	weak_ptr<TcpServerBase> server;
     int epollFd;

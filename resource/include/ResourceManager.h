@@ -9,10 +9,6 @@
 #include "Resource.h"
 #include "time_system/include/TimeSystem.h"
 
-struct CheckTime : public Time {
-    shared_ptr<Resource> r;
-};
-
 class ResourceManager : public EventSystem {
 public:
     ResourceManager();

@@ -9,9 +9,9 @@ Log::Log(const string &path) {
 }
 
 void Log::log(string &&log) {
-    mutex.lock();
+    lock.lock();
     logQueue.push(std::move(log));
-    mutex.unlock();
+    lock.unlock();
 }
 
 void Log::checkOut() {
@@ -19,12 +19,12 @@ void Log::checkOut() {
         return;
     }
     vector<string> tmp;
-    mutex.lock();
+    lock.lock();
     while (!logQueue.empty()) {
         tmp.push_back(move(logQueue.front()));
         logQueue.pop();
     }
-    mutex.unlock();
+    lock.unlock();
     for (auto& s : tmp) {
         file << s << std::endl;
     }
