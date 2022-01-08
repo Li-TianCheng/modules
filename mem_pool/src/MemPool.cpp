@@ -4,7 +4,7 @@
 
 #include "MemPool.h"
 
-MemPool::MemPool(int num): lock(126), num(num){
+MemPool::MemPool(int num): lock(128), num(num){
     for (int i = 0; i < 128; i++){
         mem.emplace_back(4+i*4, num);
     }
@@ -44,10 +44,9 @@ void* MemPool::allocateBuffer(size_t size) {
 		bufferMem[size] = nullptr;
 	}
 	if (bufferMem[size] == nullptr) {
-		m = (bufferChunk*)malloc(size);
-		bufferRwLock.wrLock();
-		ptrToSize[m] = size;
-		bufferRwLock.unlock();
+		char* tmp = (char*)malloc(sizeof(size_t)+size);
+		*(size_t*)tmp = size;
+		m = (bufferChunk*)(tmp+sizeof(size_t));
 	} else {
 		m = bufferMem[size];
 		bufferMem[size] = m->next;
@@ -57,8 +56,8 @@ void* MemPool::allocateBuffer(size_t size) {
 }
 
 void MemPool::deallocateBuffer(void* ptr) {
+	size_t size = *(size_t*)((char*)ptr-sizeof(size_t));
 	bufferRwLock.rdLock();
-	size_t size = ptrToSize[(bufferChunk*)ptr];
 	auto& lck = bufferLock[size];
 	bufferRwLock.unlock();
 	lck.lock();
@@ -72,7 +71,7 @@ MemPool::~MemPool() {
 		bufferChunk* free = m.second;
 		while (free != nullptr) {
 			bufferChunk* tmp = free->next;
-			::free(free);
+			::free((char*)free-sizeof(size_t));
 			free = tmp;
 		}
 	}

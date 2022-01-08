@@ -15,10 +15,6 @@
 using std::vector;
 using std::unordered_map;
 
-struct bufferChunk {
-	bufferChunk* next;
-};
-
 class MemPool {
 public:
     explicit MemPool(int num);
@@ -32,10 +28,13 @@ public:
     MemPool& operator=(const MemPool&) = delete;
     MemPool& operator=(MemPool&&) = delete;
 private:
+	struct bufferChunk {
+		bufferChunk* next;
+	};
+private:
     vector<ManageChunk> mem;
     vector<SpinLock> lock;
 	RwLock bufferRwLock;
-	unordered_map<bufferChunk*, size_t> ptrToSize;
 	unordered_map<size_t, bufferChunk*> bufferMem;
 	unordered_map<size_t, SpinLock> bufferLock;
     int num;

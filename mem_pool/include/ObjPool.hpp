@@ -8,6 +8,7 @@
 #include <memory>
 #include "MemPool.h"
 #include "config_system/include/ConfigSystem.h"
+#include "my_pthread/include/Thread.h"
 
 using std::shared_ptr;
 using std::weak_ptr;
@@ -26,6 +27,8 @@ public:
     ObjPool& operator=(const ObjPool&) = delete;
     ObjPool& operator=(ObjPool&&) = delete;
 private:
+	friend class Thread;
+private:
     template<typename T>
     static void deallocate(T* ptr);
 	static void deallocateBuffer(void* ptr);
@@ -34,23 +37,51 @@ private:
 
 template<typename T, typename... Args> inline
 shared_ptr<T> ObjPool::allocate(Args&&... args) {
-    void* ptr = getInstance().allocate(sizeof(T));
+	pthread_t pid = pthread_self();
+	void* ptr = nullptr;
+	if (Thread::ThreadMap.find(pid) != Thread::ThreadMap.end()) {
+		ptr = Thread::ThreadMap[pid]->allocate(sizeof(T));
+	}
+	if (ptr == nullptr) {
+		ptr = getInstance().allocate(sizeof(T));
+	}
     return shared_ptr<T>(::new(ptr) T(std::forward<Args>(args)...), deallocate<T>);
 }
 
 template<typename T> inline
 void ObjPool::deallocate(T* ptr) {
     ptr->~T();
-    getInstance().deallocate(ptr, sizeof(T));
+	pthread_t pid = pthread_self();
+	if (Thread::ThreadMap.find(pid) != Thread::ThreadMap.end()) {
+		if (!Thread::ThreadMap[pid]->deallocate(ptr, sizeof(T))) {
+			getInstance().deallocate(ptr, sizeof(T));
+		}
+	} else {
+		getInstance().deallocate(ptr, sizeof(T));
+	}
 }
 template<typename T> inline
 shared_ptr<T> ObjPool::allocateBuffer(size_t size) {
-	void* ptr = getInstance().allocateBuffer(size*sizeof(T));
+	pthread_t pid = pthread_self();
+	void* ptr = nullptr;
+	if (Thread::ThreadMap.find(pid) != Thread::ThreadMap.end()) {
+		ptr = Thread::ThreadMap[pid]->allocateBuffer(size*sizeof(T));
+	}
+	if (ptr == nullptr) {
+		ptr = getInstance().allocateBuffer(size*sizeof(T));
+	}
 	return shared_ptr<T>((T*)ptr, deallocateBuffer);
 }
 
 inline void ObjPool::deallocateBuffer(void* ptr) {
-	getInstance().deallocateBuffer(ptr);
+	pthread_t pid = pthread_self();
+	if (Thread::ThreadMap.find(pid) != Thread::ThreadMap.end()) {
+		if (!Thread::ThreadMap[pid]->deallocateBuffer(ptr)) {
+			getInstance().deallocateBuffer(ptr);
+		}
+	} else {
+		getInstance().deallocateBuffer(ptr);
+	}
 }
 
 inline MemPool& ObjPool::getInstance() {
