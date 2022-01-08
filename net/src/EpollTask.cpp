@@ -5,10 +5,14 @@
 #include "EpollTask.h"
 
 EpollTask::EpollTask(int epollEventNum) : running(false), needClose(false), sessionNum(0), waitTime(1), epollEventNum(epollEventNum) {
-    epollFd = epoll_create(1);
-    if (epollFd == -1) {
-        throw std::runtime_error("epoll 申请错误");
+	readEpollFd = epoll_create(1);
+    if (readEpollFd == -1) {
+        throw std::runtime_error("read epoll 申请错误");
     }
+	writeEpollFd = epoll_create(1);
+	if (writeEpollFd == -1) {
+		throw std::runtime_error("write epoll 申请错误");
+	}
     init();
     std::ostringstream log;
     log << "EpollTask[" << this << "] begin";
@@ -19,7 +23,8 @@ EpollTask::~EpollTask() {
     while (running) {
         needClose = true;
     }
-    ::close(epollFd);
+    ::close(readEpollFd);
+	::close(writeEpollFd);
 }
 
 void EpollTask::run() {
@@ -51,11 +56,11 @@ void EpollTask::addNewSession(shared_ptr<TcpSession> session) {
     int flags = fcntl(fd, 0);
     fcntl(fd, F_SETFL, flags|O_NONBLOCK);
     fcntl(fd, F_SETFD, FD_CLOEXEC);
-    session->epollFd = epollFd;
-    session->epollEvent.events = Read|Err|Hup|RdHup|Et|OneShot;
+    session->epollFd = writeEpollFd;
+    session->epollEvent.events = EPOLLIN|EPOLLERR|EPOLLRDHUP|EPOLLHUP|EPOLLET;
     session->sessionInit();
     sessionManager[fd] = session;
-    epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &session->epollEvent);
+    epoll_ctl(readEpollFd, EPOLL_CTL_ADD, fd, &session->epollEvent);
     std::ostringstream log;
     log << "EpollTask[" << this << "] addNewSession[" << session << "] fd[" << fd << "]";
     LOG(Info, log.str());
@@ -63,7 +68,7 @@ void EpollTask::addNewSession(shared_ptr<TcpSession> session) {
 
 void EpollTask::deleteSession(int fd) {
     if (sessionManager.find(fd) != sessionManager.end()) {
-        epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &sessionManager[fd]->epollEvent);
+        epoll_ctl(readEpollFd, EPOLL_CTL_DEL, fd, &sessionManager[fd]->epollEvent);
         auto session = sessionManager[fd];
         session->sessionClear();
 		session->isClose = true;
@@ -128,38 +133,48 @@ bool EpollTask::isRunning() {
 
 void EpollTask::readTask(shared_ptr<void> arg) {
     auto session = static_pointer_cast<TcpSession>(arg);
+	session->readNum = 1;
+	session->readLock.unlock();
     std::ostringstream log;
     log << "session[" << session << "] readTask start";
     LOG(Info, log.str());
     int res = session->readBuffer.readFromFd(session->epollEvent.data.fd);
     if (res == -1) {
-        session->isRead = false;
-	    epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
         std::ostringstream log;
         log << "session[" << session << "] readTask failed";
         LOG(Warn, log.str());
         return;
     }
-    session->handleReadDone(session->readBuffer.getReadPos(), session->readBuffer.getMsgNum());
-    session->isRead = false;
-    epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
+	size_t num = session->readBuffer.getMsgNum();
+	if (num != 0) {
+		session->handleReadDone(session->readBuffer.getReadPos(), num);
+	}
     std::ostringstream _log;
     _log << "session[" << session << "] readTask done";
     LOG(Info, _log.str());
+	session->readLock.lock();
+	--session->readNum;
+	if (session->readNum != 0) {
+		readTask(session);
+	} else {
+		session->readLock.unlock();
+	}
 }
 
 void EpollTask::writeTask(shared_ptr<void> arg) {
     auto session = static_pointer_cast<TcpSession>(arg);
+	session->writeNum = 1;
+	session->writeLock.unlock();
     std::ostringstream log;
     log << "session[" << session << "] writeTask start";
     LOG(Info, log.str());
     deque<Msg> temp;
-    session->lock.lock();
+    session->msgLock.lock();
     while (!session->msgQueue.empty()) {
         temp.push_back(std::move(session->msgQueue.front()));
         session->msgQueue.pop_front();
     }
-    session->lock.unlock();
+    session->msgLock.unlock();
     while (!temp.empty()) {
         while (true) {
             ssize_t sendNum;
@@ -183,21 +198,24 @@ void EpollTask::writeTask(shared_ptr<void> arg) {
 	        }
             if (sendNum <= 0) {
                 if (errno == EAGAIN) {
-                    session->lock.lock();
+                    session->msgLock.lock();
                     while (!temp.empty()) {
                         session->msgQueue.push_front(std::move(temp.back()));
                         temp.pop_back();
                     }
-                    session->lock.unlock();
-                    session->isWrite = false;
-                    epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
+                    session->msgLock.unlock();
                     std::ostringstream log;
                     log << "session[" << session << "] writeTask eagain";
                     LOG(Info, log.str());
+	                session->writeLock.lock();
+	                --session->writeNum;
+	                if (session->writeNum != 0) {
+		                writeTask(session);
+	                } else {
+		                session->writeLock.unlock();
+	                }
                     return;
                 } else {
-                    session->isWrite = false;
-	                epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
                     std::ostringstream log;
                     log << "session[" << session << "] writeTask failed";
                     LOG(Warn, log.str());
@@ -208,12 +226,11 @@ void EpollTask::writeTask(shared_ptr<void> arg) {
         }
         temp.pop_front();
     }
-    session->lock.lock();
+    session->msgLock.lock();
     if (session->msgQueue.empty()) {
         session->isWriteDone = true;
-        session->epollEvent.events &= ~Write;
     }
-    session->lock.unlock();
+    session->msgLock.unlock();
     if (session->isCloseConnection) {
         auto e = ObjPool::allocate<Event>(EventCloseConnection, session);
 	    auto epoll = session->epoll.lock();
@@ -221,11 +238,16 @@ void EpollTask::writeTask(shared_ptr<void> arg) {
 		    static_pointer_cast<EpollTask>(epoll)->receiveEvent(e);
 	    }
     }
-    session->isWrite = false;
-    epoll_ctl(session->epollFd, EPOLL_CTL_MOD, session->epollEvent.data.fd, &session->epollEvent);
     std::ostringstream _log;
     _log << "session[" << session << "] writeTask done";
     LOG(Info, _log.str());
+	session->writeLock.lock();
+	--session->writeNum;
+	if (session->writeNum != 0) {
+		writeTask(session);
+	} else {
+		session->writeLock.unlock();
+	}
 }
 
 void EpollTask::cycleTask(shared_ptr<void> arg) {
@@ -235,7 +257,7 @@ void EpollTask::cycleTask(shared_ptr<void> arg) {
     while (!epoll->needClose || epoll->sessionNum != 0 || !epoll->timeToFd.empty()) {
         epoll->cycleNoBlock(-1);
         epoll_event events[epoll->epollEventNum];
-        int num = epoll_wait(epoll->epollFd, events, epoll->epollEventNum, epoll->waitTime);
+        int num = epoll_wait(epoll->readEpollFd, events, epoll->epollEventNum, epoll->waitTime);
         if (num <= 0) {
             epoll->waitTime = 1;
         } else {
@@ -243,25 +265,35 @@ void EpollTask::cycleTask(shared_ptr<void> arg) {
         }
         for (int i = 0; i < num; i++) {
             auto event = events[i];
-            if (((event.events & RdHup) == RdHup) || ((event.events & Err) == Err) || ((event.events & Hup) == Hup)) {
+            if (((event.events & EPOLLRDHUP) == EPOLLRDHUP) || ((event.events & EPOLLERR) == EPOLLERR) || ((event.events & EPOLLHUP) == EPOLLHUP)) {
                 epoll->deleteSession(event.data.fd);
             } else {
-                if ((event.events & Read) == Read) {
-                    auto session = epoll->sessionManager[event.data.fd];
-                    if (!session->isRead) {
-                        session->isRead = true;
-                        TaskSystem::addTask(readTask, session);
-                    }
-                }
-                if ((event.events & Write) == Write) {
-                    auto session = epoll->sessionManager[event.data.fd];
-                    if (!session->isWrite) {
-                        session->isWrite = true;
-                        TaskSystem::addPriorityTask(writeTask, session);
-                    }
-                }
+	            auto session = epoll->sessionManager[event.data.fd];
+	            session->readLock.lock();
+	            ++session->readNum;
+	            if (session->readNum == 1) {
+		            TaskSystem::addTask(readTask, session);
+	            } else {
+		            session->readLock.unlock();
+	            }
             }
         }
+		num = epoll_wait(epoll->writeEpollFd, events, epoll->epollEventNum, 0);
+		for (int i = 0; i < num; i++) {
+			auto event = events[i];
+			if (((event.events & EPOLLRDHUP) == EPOLLRDHUP) || ((event.events & EPOLLERR) == EPOLLERR) || ((event.events & EPOLLHUP) == EPOLLHUP)) {
+				epoll->deleteSession(event.data.fd);
+			} else {
+	            auto session = epoll->sessionManager[event.data.fd];
+				session->writeLock.lock();
+				++session->writeNum;
+				if (session->writeNum == 1) {
+					TaskSystem::addPriorityTask(writeTask, session);
+				} else {
+					session->writeLock.unlock();
+				}
+			}
+		}
     }
     epoll->timeToFd.clear();
     auto e = ObjPool::allocate<Event>(EventEndCycle, nullptr);

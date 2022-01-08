@@ -11,7 +11,7 @@
 #include <vector>
 #include <unistd.h>
 #include <sstream>
-#include "EpollEventType.h"
+#include <sys/epoll.h>
 #include "time_system/include/TimeSystem.h"
 #include "event_system/include/EventSystem.h"
 #include "task_system/include/TaskSystem.h"
@@ -50,7 +50,8 @@ private:
     std::atomic<bool> needClose;
     std::atomic<bool> running;
     std::atomic<int> sessionNum;
-    int epollFd;
+    int readEpollFd;
+	int writeEpollFd;
     int waitTime;
     int epollEventNum;
     unordered_map<int, shared_ptr<TcpSession>> sessionManager;

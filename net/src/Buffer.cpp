@@ -35,7 +35,7 @@ int Buffer::readFromFd(int fd) {
         size_t size = bufferChunkSize - writeIndex % bufferChunkSize;
         ssize_t recvNum = ::recv(fd, buffer[writeIndex/bufferChunkSize].get()+writeIndex%bufferChunkSize, size, MSG_DONTWAIT);
         if (recvNum <= 0) {
-            if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
+            if (errno == EAGAIN) {
                 return 0;
             } else {
                 return -1;

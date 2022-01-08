@@ -10,7 +10,7 @@
 #include <iostream>
 #include "ManageChunk.h"
 #include "my_pthread/include/RwLock.h"
-#include "my_pthread/include/SpinLock.h"
+#include "my_pthread/include/Mutex.h"
 
 using std::vector;
 using std::unordered_map;
@@ -33,10 +33,10 @@ private:
 	};
 private:
     vector<ManageChunk> mem;
-    vector<SpinLock> lock;
+    vector<Mutex> lock;
 	RwLock bufferRwLock;
 	unordered_map<size_t, bufferChunk*> bufferMem;
-	unordered_map<size_t, SpinLock> bufferLock;
+	unordered_map<size_t, Mutex> bufferLock;
     int num;
 };
 

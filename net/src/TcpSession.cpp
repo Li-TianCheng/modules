@@ -4,7 +4,7 @@
 
 #include "TcpSession.h"
 
-TcpSession::TcpSession(int bufferChunkSize) : isCloseConnection(false), isWrite(false), isRead(false), isClose(false), isWriteDone(true), readBuffer(bufferChunkSize) {
+TcpSession::TcpSession(int bufferChunkSize) : isCloseConnection(false), isWriteDone(true), isClose(false), readNum(0), writeNum(0), readBuffer(bufferChunkSize) {
     len = sizeof(address);
 }
 
@@ -12,62 +12,70 @@ void TcpSession::write(shared_ptr<vector<char>> sendMsg, size_t offset, size_t e
     if (isCloseConnection || sendMsg == nullptr || (*sendMsg).empty() || offset >= sendMsg->size()) {
         return;
     }
-    lock.lock();
+    msgLock.lock();
+	isWriteDone = false;
     msgQueue.emplace_back(sendMsg, offset, end);
-    if (isWriteDone) {
-        epollEvent.events |= Write;
-        epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent);
-    }
-    isWriteDone = false;
-    lock.unlock();
+	epollEvent.events = EPOLLOUT|EPOLLERR|EPOLLRDHUP|EPOLLHUP|EPOLLET;
+	msgLock.unlock();
+	if (epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent) == -1) {
+		epoll_ctl(epollFd, EPOLL_CTL_ADD, epollEvent.data.fd, &epollEvent);
+	}
 }
 
 void TcpSession::write(shared_ptr<vector<unsigned char>> sendMsg, size_t offset, size_t end) {
     if (isCloseConnection || sendMsg == nullptr || (*sendMsg).empty() || offset >= sendMsg->size()) {
         return;
     }
-    isWriteDone = false;
-    lock.lock();
+    msgLock.lock();
+	isWriteDone = false;
     msgQueue.emplace_back(sendMsg, offset, end);
-    epollEvent.events |= Write;
-    lock.unlock();
-    epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent);
+	epollEvent.events = EPOLLOUT|EPOLLERR|EPOLLRDHUP|EPOLLHUP|EPOLLET;
+    msgLock.unlock();
+	if (epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent) == -1) {
+		epoll_ctl(epollFd, EPOLL_CTL_ADD, epollEvent.data.fd, &epollEvent);
+	}
 }
 
 void TcpSession::write(shared_ptr<string> sendMsg, size_t offset, size_t end) {
     if (isCloseConnection || sendMsg == nullptr || (*sendMsg).empty() || offset >= sendMsg->size()) {
         return;
     }
-    isWriteDone = false;
-    lock.lock();
+	isWriteDone = false;
+    msgLock.lock();
     msgQueue.emplace_back(sendMsg, offset, end);
-    epollEvent.events |= Write;
-    lock.unlock();
-    epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent);
+	epollEvent.events = EPOLLOUT|EPOLLERR|EPOLLRDHUP|EPOLLHUP|EPOLLET;
+    msgLock.unlock();
+	if (epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent) == -1) {
+		epoll_ctl(epollFd, EPOLL_CTL_ADD, epollEvent.data.fd, &epollEvent);
+	}
 }
 
 void TcpSession::write(shared_ptr<char> sendMsg, size_t offset, size_t end) {
 	if (isCloseConnection || sendMsg == nullptr) {
 		return;
 	}
+	msgLock.lock();
 	isWriteDone = false;
-	lock.lock();
 	msgQueue.emplace_back(sendMsg, offset, end);
-	epollEvent.events |= Write;
-	lock.unlock();
-	epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent);
+	epollEvent.events = EPOLLOUT|EPOLLERR|EPOLLRDHUP|EPOLLHUP|EPOLLET;
+	msgLock.unlock();
+	if (epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent) == -1) {
+		epoll_ctl(epollFd, EPOLL_CTL_ADD, epollEvent.data.fd, &epollEvent);
+	}
 }
 
 void TcpSession::write(shared_ptr<unsigned char> sendMsg, size_t offset, size_t end) {
 	if (isCloseConnection || sendMsg == nullptr) {
 		return;
 	}
+	msgLock.lock();
 	isWriteDone = false;
-	lock.lock();
 	msgQueue.emplace_back(sendMsg, offset, end);
-	epollEvent.events |= Write;
-	lock.unlock();
-	epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent);
+	epollEvent.events = EPOLLOUT|EPOLLERR|EPOLLRDHUP|EPOLLHUP|EPOLLET;
+	msgLock.unlock();
+	if (epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent) == -1) {
+		epoll_ctl(epollFd, EPOLL_CTL_ADD, epollEvent.data.fd, &epollEvent);
+	}
 }
 
 void TcpSession::write(Buffer& buffer) {

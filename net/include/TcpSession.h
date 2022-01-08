@@ -8,12 +8,12 @@
 #include <zconf.h>
 #include <sys/socket.h>
 #include <string>
-#include "EpollEventType.h"
+#include <sys/epoll.h>
 #include "Buffer.h"
 #include "TcpServerBase.h"
 #include "time_system/include/Time.h"
 #include "time_system/include/TimeSystem.h"
-#include "my_pthread/include/SpinLock.h"
+#include "my_pthread/include/Mutex.h"
 
 struct Msg {
     int type;
@@ -77,12 +77,14 @@ private:
     friend class Listener;
 protected:
     std::atomic<bool> isCloseConnection;
-    std::atomic<bool> isWrite;
-    std::atomic<bool> isRead;
     std::atomic<bool> isClose;
     std::atomic<bool> isWriteDone;
+	int readNum;
+	int writeNum;
+	Mutex readLock;
+	Mutex writeLock;
+	Mutex msgLock;
     deque<Msg> msgQueue;
-	SpinLock lock;
     weak_ptr<EventSystem> epoll;
 	weak_ptr<TcpServerBase> server;
     int epollFd;

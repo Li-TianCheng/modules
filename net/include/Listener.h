@@ -15,7 +15,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <arpa/inet.h>
-#include "EpollEventType.h"
+#include <sys/epoll.h>
 #include "AddressType.h"
 #include "TcpServerBase.h"
 #include "log/include/LogSystem.h"
