@@ -5,75 +5,70 @@
 #include "TcpSession.h"
 #include "EpollTask.h"
 
-TcpSession::TcpSession(int bufferChunkSize) : isCloseConnection(false), isWriteDone(true), isClose(false), readNum(0), writeNum(0), readBuffer(bufferChunkSize) {
+TcpSession::TcpSession(int bufferChunkSize) : isLive(1), readNum(0), writeNum(0), readBuffer(bufferChunkSize) {
     len = sizeof(address);
 }
 
 void TcpSession::write(shared_ptr<vector<char>> sendMsg, size_t offset, size_t end) {
-    if (isCloseConnection || sendMsg == nullptr || (*sendMsg).empty() || offset >= sendMsg->size()) {
+    if (!isLive || sendMsg == nullptr || (*sendMsg).empty() || offset >= sendMsg->size()) {
         return;
     }
     msgLock.lock();
-	isWriteDone = false;
     msgQueue.emplace_back(sendMsg, offset, end);
-	epollEvent.events = EPOLLOUT|EPOLLERR|EPOLLRDHUP|EPOLLHUP|EPOLLET;
 	msgLock.unlock();
+	epollEvent.events = EPOLLOUT|EPOLLERR|EPOLLRDHUP|EPOLLHUP|EPOLLET;
 	if (epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent) == -1) {
 		epoll_ctl(epollFd, EPOLL_CTL_ADD, epollEvent.data.fd, &epollEvent);
 	}
 }
 
 void TcpSession::write(shared_ptr<vector<unsigned char>> sendMsg, size_t offset, size_t end) {
-    if (isCloseConnection || sendMsg == nullptr || (*sendMsg).empty() || offset >= sendMsg->size()) {
+    if (!isLive || sendMsg == nullptr || (*sendMsg).empty() || offset >= sendMsg->size()) {
         return;
     }
     msgLock.lock();
-	isWriteDone = false;
     msgQueue.emplace_back(sendMsg, offset, end);
-	epollEvent.events = EPOLLOUT|EPOLLERR|EPOLLRDHUP|EPOLLHUP|EPOLLET;
     msgLock.unlock();
+	epollEvent.events = EPOLLOUT|EPOLLERR|EPOLLRDHUP|EPOLLHUP|EPOLLET;
 	if (epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent) == -1) {
 		epoll_ctl(epollFd, EPOLL_CTL_ADD, epollEvent.data.fd, &epollEvent);
 	}
 }
 
 void TcpSession::write(shared_ptr<string> sendMsg, size_t offset, size_t end) {
-    if (isCloseConnection || sendMsg == nullptr || (*sendMsg).empty() || offset >= sendMsg->size()) {
+    if (!isLive || sendMsg == nullptr || (*sendMsg).empty() || offset >= sendMsg->size()) {
         return;
     }
-	isWriteDone = false;
     msgLock.lock();
     msgQueue.emplace_back(sendMsg, offset, end);
-	epollEvent.events = EPOLLOUT|EPOLLERR|EPOLLRDHUP|EPOLLHUP|EPOLLET;
     msgLock.unlock();
+	epollEvent.events = EPOLLOUT|EPOLLERR|EPOLLRDHUP|EPOLLHUP|EPOLLET;
 	if (epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent) == -1) {
 		epoll_ctl(epollFd, EPOLL_CTL_ADD, epollEvent.data.fd, &epollEvent);
 	}
 }
 
 void TcpSession::write(shared_ptr<char> sendMsg, size_t offset, size_t end) {
-	if (isCloseConnection || sendMsg == nullptr) {
+	if (!isLive || sendMsg == nullptr) {
 		return;
 	}
 	msgLock.lock();
-	isWriteDone = false;
 	msgQueue.emplace_back(sendMsg, offset, end);
-	epollEvent.events = EPOLLOUT|EPOLLERR|EPOLLRDHUP|EPOLLHUP|EPOLLET;
 	msgLock.unlock();
+	epollEvent.events = EPOLLOUT|EPOLLERR|EPOLLRDHUP|EPOLLHUP|EPOLLET;
 	if (epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent) == -1) {
 		epoll_ctl(epollFd, EPOLL_CTL_ADD, epollEvent.data.fd, &epollEvent);
 	}
 }
 
 void TcpSession::write(shared_ptr<unsigned char> sendMsg, size_t offset, size_t end) {
-	if (isCloseConnection || sendMsg == nullptr) {
+	if (!isLive || sendMsg == nullptr) {
 		return;
 	}
 	msgLock.lock();
-	isWriteDone = false;
 	msgQueue.emplace_back(sendMsg, offset, end);
-	epollEvent.events = EPOLLOUT|EPOLLERR|EPOLLRDHUP|EPOLLHUP|EPOLLET;
 	msgLock.unlock();
+	epollEvent.events = EPOLLOUT|EPOLLERR|EPOLLRDHUP|EPOLLHUP|EPOLLET;
 	if (epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent) == -1) {
 		epoll_ctl(epollFd, EPOLL_CTL_ADD, epollEvent.data.fd, &epollEvent);
 	}
@@ -93,10 +88,13 @@ void TcpSession::write(Buffer& buffer) {
 }
 
 void TcpSession::closeConnection() {
-    isCloseConnection = true;
-	auto ep = static_pointer_cast<EpollTask>(epoll.lock());
-	if (ep != nullptr) {
-		ep->closeConnection(shared_from_this());
+	if (!isLive) {
+		return;
+	}
+	isLive = 0;
+	epollEvent.events = EPOLLOUT|EPOLLERR|EPOLLRDHUP|EPOLLHUP|EPOLLET;
+	if (epoll_ctl(epollFd, EPOLL_CTL_MOD, epollEvent.data.fd, &epollEvent) == -1) {
+		epoll_ctl(epollFd, EPOLL_CTL_ADD, epollEvent.data.fd, &epollEvent);
 	}
 }
 

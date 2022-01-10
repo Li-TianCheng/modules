@@ -18,14 +18,10 @@ void Log::checkOut() {
     if (logQueue.empty()) {
         return;
     }
-    vector<string> tmp;
-    lock.lock();
     while (!logQueue.empty()) {
-        tmp.push_back(move(logQueue.front()));
+	    lock.lock();
+	    file << logQueue.front() << std::endl;
         logQueue.pop();
-    }
-    lock.unlock();
-    for (auto& s : tmp) {
-        file << s << std::endl;
+	    lock.unlock();
     }
 }

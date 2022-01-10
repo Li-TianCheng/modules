@@ -13,7 +13,7 @@
 #include "TcpServerBase.h"
 #include "time_system/include/Time.h"
 #include "time_system/include/TimeSystem.h"
-#include "my_pthread/include/Mutex.h"
+#include "my_pthread/include/SpinLock.h"
 
 class TcpSession: public std::enable_shared_from_this<TcpSession> {
 public:
@@ -76,14 +76,12 @@ private:
 		}
 	};
 protected:
-    std::atomic<bool> isCloseConnection;
-    std::atomic<bool> isClose;
-    std::atomic<bool> isWriteDone;
+    std::atomic<int> isLive;
 	int readNum;
 	int writeNum;
-	Mutex readLock;
-	Mutex writeLock;
-	Mutex msgLock;
+	SpinLock readLock;
+	SpinLock writeLock;
+	SpinLock msgLock;
     deque<Msg> msgQueue;
     weak_ptr<EventSystem> epoll;
 	weak_ptr<TcpServerBase> server;

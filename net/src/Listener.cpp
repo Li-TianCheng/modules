@@ -39,8 +39,10 @@ void Listener::registerListener(int port, AddressType addressType, shared_ptr<Tc
         ::close(serverFd);
         throw std::runtime_error("listener创建失败");
     }
+	int flags = fcntl(serverFd, 0);
+	fcntl(serverFd, F_SETFL, flags|O_NONBLOCK);
     server->epollEvent.data.fd = serverFd;
-    server->epollEvent.events = EPOLLIN | EPOLLERR;
+    server->epollEvent.events = EPOLLIN | EPOLLERR | EPOLLET;
     epoll_ctl(epollFd, EPOLL_CTL_ADD, serverFd, &server->epollEvent);
     listenMap[serverFd] = server;
 }
@@ -65,15 +67,18 @@ void Listener::listen() {
                     ::close(events[i].data.fd);
                     epoll_ctl(epollFd, EPOLL_CTL_DEL, events[i].data.fd, &listenMap[events[i].data.fd]->epollEvent);
                     listenMap.erase(events[i].data.fd);
-                }
-                if ((events[i].events & EPOLLIN) == EPOLLIN) {
-                    auto session = listenMap[events[i].data.fd]->getSession();
-                    int clientFd = accept(events[i].data.fd, &session->address, &session->len);
-                    if (clientFd > 0) {
-                        session->epollEvent.data.fd = clientFd;
-                        addNewSession(session);
-                    }
-                }
+                } else {
+	                while(true) {
+		                auto session = listenMap[events[i].data.fd]->getSession();
+		                int clientFd = accept(events[i].data.fd, &session->address, &session->len);
+		                if (clientFd > 0) {
+			                session->epollEvent.data.fd = clientFd;
+			                addNewSession(session);
+		                } else {
+			                break;
+		                }
+	                }
+				}
             }
         }
     }
