@@ -10,26 +10,16 @@ void ResourceSystem::init() {
 }
 
 void ResourceSystem::close() {
-    auto e = ObjPool::allocate<Event>(EventEndCycle, nullptr);
-    getResourceManager()->receiveEvent(e);
+    getResourceManager()->closeCycle();
     getThread().join();
 }
 
-void ResourceSystem::registerResource(std::shared_ptr<Resource> resource) {
-
-}
-
 void ResourceSystem::registerResource(std::shared_ptr<Resource> resource, int h, int m, int s, int ms) {
-    auto t = ObjPool::allocate<Time>(h, m, s, ms, getResourceManager());
-    auto arg = ObjPool::allocate<ResourceArg>(resource, t);
-    auto e = ObjPool::allocate<Event>(EventRegisterResource, arg);
-    getResourceManager()->receiveEvent(e);
+    getResourceManager()->registerResource(resource, h, m, s, ms);
 }
 
 void ResourceSystem::unregisterResource(std::shared_ptr<Resource> resource) {
-    auto arg = ObjPool::allocate<ResourceArg>(resource, getResourceManager());
-    auto e = ObjPool::allocate<Event>(EventUnregisterResource, arg);
-    getResourceManager()->receiveEvent(e);
+	getResourceManager()->unregisterResource(resource);
 }
 
 void *ResourceSystem::handle(void *) {

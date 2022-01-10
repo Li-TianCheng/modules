@@ -15,34 +15,6 @@
 #include "time_system/include/TimeSystem.h"
 #include "my_pthread/include/Mutex.h"
 
-struct Msg {
-    int type;
-    size_t offset;
-    size_t end;
-    shared_ptr<void> msg;
-    Msg(shared_ptr<string> msg, size_t offset, size_t end) : type(0), msg(msg), offset(offset), end(end) {
-        if (end == -1) {
-            this->end = msg->size();
-        }
-    }
-    Msg(shared_ptr<vector<char>> msg, size_t offset, size_t end) : type(1), msg(msg), offset(offset), end(end) {
-        if (end == -1) {
-            this->end = msg->size();
-        }
-    }
-    Msg(shared_ptr<vector<unsigned char>> msg, size_t offset, size_t end) : type(2), msg(msg), offset(offset), end(end) {
-        if (end == -1) {
-            this->end = msg->size();
-        }
-    }
-	Msg(shared_ptr<char> msg, size_t offset, size_t end) : type(3), msg(msg), offset(offset), end(end) {
-
-	}
-	Msg(shared_ptr<unsigned char> msg, size_t offset, size_t end) : type(4), msg(msg), offset(offset), end(end) {
-
-	}
-};
-
 class TcpSession: public std::enable_shared_from_this<TcpSession> {
 public:
     explicit TcpSession(int bufferChunkSize);
@@ -59,7 +31,7 @@ public:
 	void copy(const iter& begin, size_t n, unsigned char* buff);
 	void copy(const iter& begin, size_t n, Buffer& buff);
     void closeConnection();
-    void closeListen();
+    void closeServer();
     void deleteSession();
     shared_ptr<Time> addTicker(int h, int m, int s, int ms);
 	shared_ptr<Time> addTimer(int h, int m, int s, int ms);
@@ -75,6 +47,34 @@ private:
     template<typename T>
     friend class TcpServer;
     friend class Listener;
+private:
+	struct Msg {
+		int type;
+		size_t offset;
+		size_t end;
+		shared_ptr<void> msg;
+		Msg(shared_ptr<string> msg, size_t offset, size_t end) : type(0), msg(msg), offset(offset), end(end) {
+			if (end == -1) {
+				this->end = msg->size();
+			}
+		}
+		Msg(shared_ptr<vector<char>> msg, size_t offset, size_t end) : type(1), msg(msg), offset(offset), end(end) {
+			if (end == -1) {
+				this->end = msg->size();
+			}
+		}
+		Msg(shared_ptr<vector<unsigned char>> msg, size_t offset, size_t end) : type(2), msg(msg), offset(offset), end(end) {
+			if (end == -1) {
+				this->end = msg->size();
+			}
+		}
+		Msg(shared_ptr<char> msg, size_t offset, size_t end) : type(3), msg(msg), offset(offset), end(end) {
+
+		}
+		Msg(shared_ptr<unsigned char> msg, size_t offset, size_t end) : type(4), msg(msg), offset(offset), end(end) {
+
+		}
+	};
 protected:
     std::atomic<bool> isCloseConnection;
     std::atomic<bool> isClose;
@@ -92,12 +92,6 @@ protected:
     socklen_t len;
     epoll_event epollEvent;
     Buffer readBuffer;
-};
-
-struct EpollEventArg {
-    shared_ptr<Time> t;
-    shared_ptr<TcpSession> session;
-    EpollEventArg(shared_ptr<Time> t, shared_ptr<TcpSession> session) : t(t), session(session) {};
 };
 
 #endif //NET_TCPSESSION_H

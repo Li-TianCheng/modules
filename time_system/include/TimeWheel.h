@@ -36,6 +36,13 @@ private:
     static void handleTickerTimeOut(shared_ptr<void> arg);
     static void handleEndCycle(shared_ptr<void> arg);
 private:
+	struct TimeWheelEventArg {
+		weak_ptr<Time> t;
+		shared_ptr<Time> nextTime;
+		TimeWheelEventArg(shared_ptr<Time> t, shared_ptr<Time> nextTime): t(t), nextTime(nextTime) {};
+	};
+	friend class TimeSystem;
+private:
     vector<queue<shared_ptr<Event>>> millisecond;
     vector<queue<shared_ptr<Event>>> second;
     vector<queue<shared_ptr<Event>>> minute;
@@ -46,12 +53,6 @@ private:
     int sIter;
     int mIter;
     int hIter;
-};
-
-struct TimeWheelEventArg {
-	weak_ptr<Time> t;
-    shared_ptr<Time> nextTime;
-    TimeWheelEventArg(shared_ptr<Time> t, shared_ptr<Time> nextTime): t(t), nextTime(nextTime) {};
 };
 
 #endif //TIMESYSTEM_TIMEWHEEL_H

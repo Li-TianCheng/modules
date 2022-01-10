@@ -298,7 +298,6 @@ void Raft::sendRequestVoteRpc(const string& address) {
 	*cmd += "$requestVote$"+to_string(currTerm)+"$"+to_string(last->idx)+"$"+to_string(last->term)+"$$";
 	auto session = raftServer->getSession();
 	static_pointer_cast<RaftSession>(session)->send = cmd;
-	auto arg = ObjPool::allocate<addNewSessionArg>();
 	listener->addNewSession(session, address, IPV4);
 }
 

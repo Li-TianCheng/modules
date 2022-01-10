@@ -104,3 +104,8 @@ void EventSystem::cycleNoBlock(int maxNum) {
     }
 }
 
+void EventSystem::closeCycle() {
+    auto e = ObjPool::allocate<Event>(EventEndCycle, nullptr);
+    receiveEvent(e);
+}
+

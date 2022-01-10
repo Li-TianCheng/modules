@@ -3,6 +3,7 @@
 //
 
 #include "TcpSession.h"
+#include "EpollTask.h"
 
 TcpSession::TcpSession(int bufferChunkSize) : isCloseConnection(false), isWriteDone(true), isClose(false), readNum(0), writeNum(0), readBuffer(bufferChunkSize) {
     len = sizeof(address);
@@ -93,26 +94,23 @@ void TcpSession::write(Buffer& buffer) {
 
 void TcpSession::closeConnection() {
     isCloseConnection = true;
-    auto e = ObjPool::allocate<Event>(EventCloseConnection, shared_from_this());
-	auto ep = epoll.lock();
+	auto ep = static_pointer_cast<EpollTask>(epoll.lock());
 	if (ep != nullptr) {
-		ep->receiveEvent(e);
+		ep->closeConnection(shared_from_this());
 	}
 }
 
-void TcpSession::closeListen() {
-    auto e = ObjPool::allocate<Event>(EventCloseListener, shared_from_this());
-	auto ep = epoll.lock();
+void TcpSession::closeServer() {
+	auto ep = static_pointer_cast<EpollTask>(epoll.lock());
 	if (ep != nullptr) {
-		ep->receiveEvent(e);
+		ep->closeServer(server.lock());
 	}
 }
 
 void TcpSession::deleteSession() {
-    auto e = ObjPool::allocate<Event>(EventDeleteSession, shared_from_this());
-	auto ep = epoll.lock();
+	auto ep = static_pointer_cast<EpollTask>(epoll.lock());
 	if (ep != nullptr) {
-		ep->receiveEvent(e);
+		ep->deleteSession(shared_from_this());
 	}
 }
 
@@ -127,11 +125,7 @@ void TcpSession::sessionClear() {
 shared_ptr<Time> TcpSession::addTicker(int h, int m, int s, int ms) {
 	auto ep = epoll.lock();
 	if (ep != nullptr) {
-		auto t = ObjPool::allocate<Time>(h, m, s, ms, ep->shared_from_this());
-		auto arg = ObjPool::allocate<EpollEventArg>(t, shared_from_this());
-		auto e = ObjPool::allocate<Event>(EventTicker, arg);
-		ep->receiveEvent(e);
-		return t;
+		return static_pointer_cast<EpollTask>(ep)->addTicker(shared_from_this(), h, m, s, ms);
 	}
 	return nullptr;
 }
@@ -139,11 +133,7 @@ shared_ptr<Time> TcpSession::addTicker(int h, int m, int s, int ms) {
 shared_ptr<Time> TcpSession::addTimer(int h, int m, int s, int ms) {
 	auto ep = epoll.lock();
 	if (ep != nullptr) {
-		auto t = ObjPool::allocate<Time>(h, m, s, ms, ep->shared_from_this());
-		auto arg = ObjPool::allocate<EpollEventArg>(t, shared_from_this());
-		auto e = ObjPool::allocate<Event>(EventTimer, arg);
-		ep->receiveEvent(e);
-		return t;
+		return static_pointer_cast<EpollTask>(ep)->addTimer(shared_from_this(), h, m, s, ms);
 	}
 	return nullptr;
 }

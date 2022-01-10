@@ -249,3 +249,18 @@ bool Listener::addNewSession(shared_ptr<TcpSession> session, const string &addre
 	receiveEvent(e);
 	return true;
 }
+
+void Listener::addListener(int port, AddressType addressType, shared_ptr<TcpServerBase> server) {
+	auto arg = ObjPool::allocate<addListenerArg>();
+	arg->listener = static_pointer_cast<Listener>(shared_from_this());
+	arg->port = port;
+	arg->addressType = addressType;
+	arg->server = server;
+	auto e = ObjPool::allocate<Event>(EventAddListener, arg);
+	receiveEvent(e);
+}
+
+void Listener::closeServer(shared_ptr<TcpServerBase> server) {
+	auto e = ObjPool::allocate<Event>(EventCloseListener, server);
+	receiveEvent(e);
+}

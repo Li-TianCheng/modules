@@ -47,6 +47,12 @@ private:
         shared_ptr<void> arg;
         TaskNode(void (*task)(shared_ptr<void>), shared_ptr<void> arg):task(task), arg(arg){};
     };
+    struct ThreadPoolEventArg{
+        ThreadPool* ptr;
+        _Thread* tPtr;
+        ThreadPoolEventArg(ThreadPool* ptr, _Thread* tPtr): ptr(ptr), tPtr(tPtr){};
+    };
+private:
     shared_ptr<Time> t;
     Mutex mutex;
     std::atomic<int> runningNum;
@@ -60,10 +66,5 @@ private:
     deque<TaskNode> taskQueue;
 };
 
-struct ThreadPoolEventArg{
-    ThreadPool* ptr;
-    _Thread* tPtr;
-    ThreadPoolEventArg(ThreadPool* ptr, _Thread* tPtr): ptr(ptr), tPtr(tPtr){};
-};
 
 #endif //TASKSYSTEM_THREADPOOL_H

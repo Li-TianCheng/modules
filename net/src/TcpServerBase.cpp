@@ -3,12 +3,12 @@
 //
 
 #include "TcpServerBase.h"
+#include "Listener.h"
 
 void TcpServerBase::close() {
-    auto e = ObjPool::allocate<Event>(EventCloseListener, shared_from_this());
 	auto l = listener.lock();
 	if (l != nullptr) {
-		l->receiveEvent(e);
+		static_pointer_cast<Listener>(l)->closeServer(shared_from_this());
 	}
 }
 

@@ -56,3 +56,16 @@ void ResourceManager::cycleClear() {
     timeToResource.clear();
     resourceToTime.clear();
 }
+
+void ResourceManager::registerResource(std::shared_ptr<Resource> resource, int h, int m, int s, int ms) {
+	auto t = ObjPool::allocate<Time>(h, m, s, ms, shared_from_this());
+	auto arg = ObjPool::allocate<ResourceArg>(resource, t);
+	auto e = ObjPool::allocate<Event>(EventRegisterResource, arg);
+	receiveEvent(e);
+}
+
+void ResourceManager::unregisterResource(std::shared_ptr<Resource> resource) {
+	auto arg = ObjPool::allocate<ResourceArg>(resource, shared_from_this());
+	auto e = ObjPool::allocate<Event>(EventUnregisterResource, arg);
+	receiveEvent(e);
+}

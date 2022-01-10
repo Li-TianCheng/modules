@@ -12,6 +12,8 @@
 class ResourceManager : public EventSystem {
 public:
     ResourceManager();
+	void registerResource(std::shared_ptr<Resource> resource, int h, int m, int s, int ms);
+	void unregisterResource(std::shared_ptr<Resource> resource);
     ~ResourceManager() override = default;
 private:
     void cycleClear() override;
@@ -21,15 +23,18 @@ private:
     static void handleRegisterResource(shared_ptr<void> arg);
     static void handleUnregisterResource(shared_ptr<void> arg);
 private:
+	struct ResourceArg {
+		shared_ptr<Resource> resource;
+		shared_ptr<void> arg;
+		ResourceArg(shared_ptr<Resource> resource, shared_ptr<void> arg) : resource(resource), arg(arg) {}
+	};
+	friend class ResourceSystem;
+private:
     unordered_map<shared_ptr<Time>, shared_ptr<Resource>> timeToResource;
     unordered_map<shared_ptr<Resource>, shared_ptr<Time>> resourceToTime;
 };
 
-struct ResourceArg {
-    shared_ptr<Resource> resource;
-    shared_ptr<void> arg;
-    ResourceArg(shared_ptr<Resource> resource, shared_ptr<void> arg) : resource(resource), arg(arg) {}
-};
+
 
 
 #endif //RESOURCE_RESOURCEMANAGER_H

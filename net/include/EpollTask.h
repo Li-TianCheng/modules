@@ -29,6 +29,11 @@ public:
     explicit EpollTask(int epollEventNum);
     bool isRunning();
     void run();
+	shared_ptr<Time> addTicker(shared_ptr<TcpSession> session, int h, int m, int s, int ms);
+	shared_ptr<Time> addTimer(shared_ptr<TcpSession> session, int h, int m, int s, int ms);
+	void closeConnection(shared_ptr<TcpSession> session);
+	void deleteSession(shared_ptr<TcpSession> session);
+	void closeServer(shared_ptr<TcpServerBase> server);
     ~EpollTask() override;
 private:
     friend class Listener;
@@ -46,6 +51,12 @@ private:
     static void handleCloseListen(shared_ptr<void> arg);
     static void handleAddSession(shared_ptr<void> arg);
     static void handleDeleteSession(shared_ptr<void> arg);
+private:
+	struct EpollEventArg {
+		shared_ptr<Time> t;
+		shared_ptr<TcpSession> session;
+		EpollEventArg(shared_ptr<Time> t, shared_ptr<TcpSession> session) : t(t), session(session) {};
+	};
 private:
     std::atomic<bool> needClose;
     std::atomic<bool> running;

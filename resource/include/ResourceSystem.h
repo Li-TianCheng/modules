@@ -14,7 +14,6 @@ class ResourceSystem {
 public:
     static void init();
     static void close();
-    static void registerResource(std::shared_ptr<Resource> resource);
     static void registerResource(std::shared_ptr<Resource> resource, int h, int m, int s, int ms);
     static void unregisterResource(std::shared_ptr<Resource> resource);
     static void receiveEvent(EventKey eventType, shared_ptr<void> arg);
