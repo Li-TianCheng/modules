@@ -8,12 +8,12 @@
 #include <regex>
 #include <ctime>
 #include "HttpServer.h"
-#include "net/include/TcpSession.h"
+#include "net/include/Session.h"
 #include "net/include/Ping.h"
 
 struct Http;
 
-class HttpSession : public TcpSession {
+class HttpSession : public Session {
 public:
     HttpSession(int bufferChunkSize);
     ~HttpSession() override = default;

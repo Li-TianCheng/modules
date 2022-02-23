@@ -19,7 +19,7 @@ using std::vector;
 using std::shared_ptr;
 
 struct iter;
-class TcpSession;
+class Session;
 
 class Buffer {
 public:
@@ -43,7 +43,7 @@ public:
     int readFromFd(int fd);
     ~Buffer() = default;
 private:
-	friend class TcpSession;
+	friend class Session;
     void shrink();
 private:
     deque<shared_ptr<unsigned char>> buffer;

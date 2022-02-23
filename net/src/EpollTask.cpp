@@ -43,14 +43,14 @@ void EpollTask::init() {
 }
 
 void EpollTask::handleAddSession(shared_ptr<void> arg) {
-    auto session = static_pointer_cast<TcpSession>(arg);
+    auto session = static_pointer_cast<Session>(arg);
 	auto epoll = session->epoll.lock();
 	if (epoll != nullptr) {
 		static_pointer_cast<EpollTask>(epoll)->addNewSession(session);
 	}
 }
 
-void EpollTask::addNewSession(shared_ptr<TcpSession> session) {
+void EpollTask::addNewSession(shared_ptr<Session> session) {
     int fd = session->epollEvent.data.fd;
     int flags = fcntl(fd, 0);
     fcntl(fd, F_SETFL, flags|O_NONBLOCK);
@@ -132,7 +132,7 @@ bool EpollTask::isRunning() {
 }
 
 void EpollTask::readTask(shared_ptr<void> arg) {
-    auto session = static_pointer_cast<TcpSession>(arg);
+    auto session = static_pointer_cast<Session>(arg);
 	session->readNum = 1;
 	session->readLock.unlock();
     std::ostringstream log;
@@ -162,7 +162,7 @@ void EpollTask::readTask(shared_ptr<void> arg) {
 }
 
 void EpollTask::writeTask(shared_ptr<void> arg) {
-    auto session = static_pointer_cast<TcpSession>(arg);
+    auto session = static_pointer_cast<Session>(arg);
 	session->writeNum = 1;
 	session->writeLock.unlock();
     std::ostringstream log;
@@ -298,21 +298,21 @@ void EpollTask::cycleTask(shared_ptr<void> arg) {
 }
 
 void EpollTask::handleCloseListen(shared_ptr<void> arg) {
-	auto server = static_pointer_cast<TcpServerBase>(arg);
+	auto server = static_pointer_cast<ServerBase>(arg);
 	if (server != nullptr) {
 		server->close();
 	}
 }
 
 void EpollTask::handleDeleteSession(shared_ptr<void> arg) {
-	auto session = static_pointer_cast<TcpSession>(arg);
+	auto session = static_pointer_cast<Session>(arg);
 	auto epoll = session->epoll.lock();
 	if (epoll != nullptr) {
 		static_pointer_cast<EpollTask>(epoll)->deleteSession(session->epollEvent.data.fd);
 	}
 }
 
-shared_ptr<Time> EpollTask::addTicker(shared_ptr<TcpSession> session, int h, int m, int s, int ms) {
+shared_ptr<Time> EpollTask::addTicker(shared_ptr<Session> session, int h, int m, int s, int ms) {
 	auto t = ObjPool::allocate<Time>(h, m, s, ms, shared_from_this());
 	auto arg = ObjPool::allocate<EpollEventArg>(t, session);
 	auto e = ObjPool::allocate<Event>(EventTicker, arg);
@@ -320,7 +320,7 @@ shared_ptr<Time> EpollTask::addTicker(shared_ptr<TcpSession> session, int h, int
 	return t;
 }
 
-shared_ptr<Time> EpollTask::addTimer(shared_ptr<TcpSession> session, int h, int m, int s, int ms) {
+shared_ptr<Time> EpollTask::addTimer(shared_ptr<Session> session, int h, int m, int s, int ms) {
 	auto t = ObjPool::allocate<Time>(h, m, s, ms, shared_from_this());
 	auto arg = ObjPool::allocate<EpollEventArg>(t, session);
 	auto e = ObjPool::allocate<Event>(EventTimer, arg);
@@ -328,7 +328,7 @@ shared_ptr<Time> EpollTask::addTimer(shared_ptr<TcpSession> session, int h, int 
 	return t;
 }
 
-void EpollTask::deleteSession(shared_ptr<TcpSession> session) {
+void EpollTask::deleteSession(shared_ptr<Session> session) {
 	if (session->isLive == -1) {
 		return;
 	}
@@ -336,7 +336,7 @@ void EpollTask::deleteSession(shared_ptr<TcpSession> session) {
 	receiveEvent(e);
 }
 
-void EpollTask::closeServer(shared_ptr<TcpServerBase> server) {
+void EpollTask::closeServer(shared_ptr<ServerBase> server) {
 	auto e = ObjPool::allocate<Event>(EventCloseListener, server);
 	receiveEvent(e);
 }

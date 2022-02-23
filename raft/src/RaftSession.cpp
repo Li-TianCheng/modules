@@ -5,7 +5,7 @@
 #include "RaftSession.h"
 #include "Raft.h"
 
-RaftSession::RaftSession(weak_ptr<EventSystem> raft, int bufferChunkSize) : raft(raft), TcpSession(bufferChunkSize) {
+RaftSession::RaftSession(weak_ptr<EventSystem> raft, int bufferChunkSize) : raft(raft), Session(bufferChunkSize) {
 
 }
 

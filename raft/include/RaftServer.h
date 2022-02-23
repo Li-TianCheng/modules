@@ -5,15 +5,15 @@
 #ifndef RAFT_RAFTSERVER_H
 #define RAFT_RAFTSERVER_H
 
-#include "net/include/TcpServerBase.h"
+#include "net/include/ServerBase.h"
 #include "RaftSession.h"
 
 class Raft;
 
-class RaftServer : public TcpServerBase {
+class RaftServer : public ServerBase {
 public:
 	explicit RaftServer(shared_ptr<EventSystem> raft);
-	shared_ptr<TcpSession> getSession() override;
+	shared_ptr<Session> getSession() override;
 private:
 	weak_ptr<EventSystem> raft;
 	int bufferChunkSize;

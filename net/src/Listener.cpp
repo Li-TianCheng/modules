@@ -17,12 +17,18 @@ Listener::Listener() : waitTime(1), waitCLose(nullptr), count(0),
     registerEvent(EventAddListener, handleAddListener);
 }
 
-void Listener::registerListener(int port, AddressType addressType, shared_ptr<TcpServerBase> server) {
+void Listener::registerListener(int port, AddressType addressType, shared_ptr<ServerBase> server, bool udp) {
     server->addressType = addressType;
     server->port = port;
     server->listener = shared_from_this();
-    int serverFd = socket(addressType, SOCK_STREAM|SOCK_CLOEXEC, 0);
+	int serverFd = -1;
+	if (udp) {
+		serverFd = socket(addressType, SOCK_DGRAM|SOCK_CLOEXEC, 0);
+	} else {
+		serverFd = socket(addressType, SOCK_STREAM|SOCK_CLOEXEC, 0);
+	}
     server->serverFd = serverFd;
+	server->udp = udp;
     int reuse = 1;
     setsockopt(serverFd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
     bzero(&server->serverAddress, sizeof(server->serverAddress));
@@ -69,8 +75,14 @@ void Listener::listen() {
                     listenMap.erase(events[i].data.fd);
                 } else {
 	                while(true) {
-		                auto session = listenMap[events[i].data.fd]->getSession();
-		                int clientFd = accept(events[i].data.fd, &session->address, &session->len);
+						auto server = listenMap[events[i].data.fd];
+		                auto session = server->getSession();
+		                int clientFd = -1;
+						if (server->udp) {
+							clientFd = udpAccept(server);
+						} else {
+							clientFd = accept(events[i].data.fd, &session->address, &session->len);
+						}
 		                if (clientFd > 0) {
 			                session->epollEvent.data.fd = clientFd;
 			                addNewSession(session);
@@ -110,11 +122,13 @@ Listener::~Listener() {
 
 void Listener::cycleInit() {
     for (auto& it : listenMap) {
-        int err = ::listen(it.first, ConfigSystem::getConfig()["system"]["net"]["listener"]["accept_num"].asInt());
-        if (err == -1){
-            ::close(it.first);
-            throw std::runtime_error(std::to_string(it.first)+"监听失败");
-        }
+		if (!it.second->udp) {
+			int err = ::listen(it.first, ConfigSystem::getConfig()["system"]["net"]["listener"]["accept_num"].asInt());
+			if (err == -1){
+				::close(it.first);
+				throw std::runtime_error(std::to_string(it.first)+"监听失败");
+			}
+		}
         LOG(Info, "port:"+std::to_string(it.second->port)+" listen begin");
     }
     auto e = ObjPool::allocate<EpollTask>(epollSessionNum);
@@ -123,18 +137,18 @@ void Listener::cycleInit() {
 }
 
 void Listener::handleCloseListener(shared_ptr<void> arg) {
-	auto server = static_pointer_cast<TcpServerBase>(arg);
+	auto server = static_pointer_cast<ServerBase>(arg);
 	auto listener = static_pointer_cast<Listener>(server->listener.lock());
 	if (listener != nullptr) {
 		epoll_ctl(listener->epollFd, EPOLL_CTL_DEL, server->serverFd, &server->epollEvent);
 		::shutdown(server->serverFd, SHUT_RD);
 		::close(server->serverFd);
 		listener->listenMap.erase(server->serverFd);
-		LOG(Info, "port:"+std::to_string(server->port)+" listen idx");
+		LOG(Info, "port:"+std::to_string(server->port)+" listen close");
 	}
 }
 
-void Listener::addNewSession(shared_ptr<TcpSession> session) {
+void Listener::addNewSession(shared_ptr<Session> session) {
     if (session == nullptr && waitCLose != nullptr && waitCLose->sessionNum == 0) {
         malloc_trim(0);
         waitCLose->needClose = true;
@@ -204,12 +218,14 @@ void Listener::addNewSession(shared_ptr<TcpSession> session) {
 
 void Listener::handleAddListener(shared_ptr<void> arg) {
     auto _arg = static_pointer_cast<addListenerArg>(arg);
-    _arg->listener->registerListener(_arg->port, _arg->addressType, _arg->server);
-    int err = ::listen(_arg->server->serverFd, ConfigSystem::getConfig()["system"]["net"]["listener"]["accept_num"].asInt());
-    if (err == -1){
-        ::close(_arg->server->serverFd);
-        return;
-    }
+    _arg->listener->registerListener(_arg->port, _arg->addressType, _arg->server, _arg->udp);
+	if (!_arg->udp) {
+		int err = ::listen(_arg->server->serverFd, ConfigSystem::getConfig()["system"]["net"]["listener"]["accept_num"].asInt());
+		if (err == -1){
+			::close(_arg->server->serverFd);
+			return;
+		}
+	}
     LOG(Info, "port:"+std::to_string(_arg->port)+" listen begin");
 }
 
@@ -219,7 +235,7 @@ void Listener::handleAddSession(shared_ptr<void> arg) {
     static_pointer_cast<Listener>(_arg->listener)->addNewSession(session);
 }
 
-bool Listener::addNewSession(shared_ptr<TcpSession> session, const string &address, AddressType addressType) {
+bool Listener::addNewSession(shared_ptr<Session> session, const string &address, AddressType addressType) {
 	vector<string> split = utils::split(address, ':');
 	session->epollEvent.data.fd = socket(addressType, SOCK_STREAM, 0);
 	bzero(&session->address, sizeof(session->address));
@@ -255,17 +271,37 @@ bool Listener::addNewSession(shared_ptr<TcpSession> session, const string &addre
 	return true;
 }
 
-void Listener::addListener(int port, AddressType addressType, shared_ptr<TcpServerBase> server) {
+void Listener::addListener(int port, AddressType addressType, shared_ptr<ServerBase> server, bool udp) {
 	auto arg = ObjPool::allocate<addListenerArg>();
 	arg->listener = static_pointer_cast<Listener>(shared_from_this());
 	arg->port = port;
 	arg->addressType = addressType;
 	arg->server = server;
+	arg->udp = udp;
 	auto e = ObjPool::allocate<Event>(EventAddListener, arg);
 	receiveEvent(e);
 }
 
-void Listener::closeServer(shared_ptr<TcpServerBase> server) {
+void Listener::closeServer(shared_ptr<ServerBase> server) {
 	auto e = ObjPool::allocate<Event>(EventCloseListener, server);
 	receiveEvent(e);
+}
+
+int Listener::udpAccept(shared_ptr<ServerBase> server) {
+	sockaddr_in clientAddress;
+	socklen_t len = sizeof(clientAddress);
+	if (recvfrom(server->serverFd, nullptr, 0, 0, (sockaddr*)&clientAddress, &len) >= 0) {
+		int clientFd = socket(server->addressType, SOCK_DGRAM|SOCK_CLOEXEC, 0);
+		if (clientFd > 0) {
+			int reuse = 1;
+			setsockopt(clientFd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
+			if (bind(clientFd, (sockaddr*)&server->serverAddress, sizeof(sockaddr)) < 0 ||
+			    connect(clientFd, (sockaddr*)&clientAddress, sizeof(sockaddr)) < 0) {
+				::close(clientFd);
+				return -1;
+			}
+		}
+		return clientFd;
+	}
+	return -1;
 }

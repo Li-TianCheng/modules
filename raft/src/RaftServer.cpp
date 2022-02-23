@@ -8,6 +8,6 @@ RaftServer::RaftServer(shared_ptr<EventSystem> raft) : raft(raft), bufferChunkSi
 
 }
 
-shared_ptr<TcpSession> RaftServer::getSession() {
+shared_ptr<Session> RaftServer::getSession() {
 	return ObjPool::allocate<RaftSession>(raft.lock(), bufferChunkSize);
 }

@@ -10,14 +10,14 @@
 #include <string>
 #include <sys/epoll.h>
 #include "Buffer.h"
-#include "TcpServerBase.h"
+#include "ServerBase.h"
 #include "time_system/include/Time.h"
 #include "time_system/include/TimeSystem.h"
 #include "my_pthread/include/SpinLock.h"
 
-class TcpSession: public std::enable_shared_from_this<TcpSession> {
+class Session: public std::enable_shared_from_this<Session> {
 public:
-    explicit TcpSession(int bufferChunkSize);
+    explicit Session(int bufferChunkSize);
     void write(shared_ptr<vector<char>> sendMsg, size_t offset=0, size_t end=-1);
     void write(shared_ptr<vector<unsigned char>> sendMsg, size_t offset=0, size_t end=-1);
     void write(shared_ptr<string> sendMsg, size_t offset=0, size_t end=-1);
@@ -41,11 +41,11 @@ public:
     virtual void handleTickerTimeOut(shared_ptr<Time> t);
     virtual void handleTimerTimeOut(shared_ptr<Time> t);
     virtual void handleReadDone(iter pos, size_t n);
-    virtual ~TcpSession() = default;
+    virtual ~Session() = default;
 private:
     friend class EpollTask;
     template<typename T>
-    friend class TcpServer;
+    friend class Server;
     friend class Listener;
 private:
 	struct Msg {
@@ -84,7 +84,7 @@ protected:
 	SpinLock msgLock;
     deque<Msg> msgQueue;
     weak_ptr<EventSystem> epoll;
-	weak_ptr<TcpServerBase> server;
+	weak_ptr<ServerBase> server;
     int epollFd;
     sockaddr address;
     socklen_t len;

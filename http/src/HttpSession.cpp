@@ -11,7 +11,7 @@ void HttpSession::handleReadDone(iter pos, size_t n) {
     readDone(n);
 }
 
-HttpSession::HttpSession(int bufferChunkSize) : request(nullptr), status(0), timeout(0), count(0), TcpSession(bufferChunkSize) {
+HttpSession::HttpSession(int bufferChunkSize) : request(nullptr), status(0), timeout(0), count(0), Session(bufferChunkSize) {
 
 }
 

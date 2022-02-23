@@ -3,7 +3,7 @@
 //
 
 #include "net/include/Buffer.h"
-#include "TcpSession.h"
+#include "Session.h"
 
 Buffer::Buffer(int bufferChunkSize) : bufferChunkSize(bufferChunkSize), buffer(1), readIndex(0), writeIndex(0) {
 	buffer[0] = ObjPool::allocateBuffer<unsigned char>(bufferChunkSize);

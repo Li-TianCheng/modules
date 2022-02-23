@@ -5,12 +5,12 @@
 #ifndef RAFT_RAFTSESSION_H
 #define RAFT_RAFTSESSION_H
 
-#include "net/include/TcpSession.h"
+#include "net/include/Session.h"
 #include "utils/include/StringUtils.h"
 
 struct RaftLog;
 
-class RaftSession : public TcpSession {
+class RaftSession : public Session {
 public:
 	RaftSession(weak_ptr<EventSystem> raft, int bufferChunkSize);
 	void handleReadDone(iter pos, size_t n) override;
