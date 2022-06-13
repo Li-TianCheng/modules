@@ -57,9 +57,9 @@ void EpollTask::addNewSession(shared_ptr<Session> session) {
     fcntl(fd, F_SETFD, FD_CLOEXEC);
     session->epollFd = writeEpollFd;
     session->epollEvent.events = EPOLLIN|EPOLLERR|EPOLLRDHUP|EPOLLHUP|EPOLLET;
-    session->sessionInit();
     sessionManager[fd] = session;
     epoll_ctl(readEpollFd, EPOLL_CTL_ADD, fd, &session->epollEvent);
+	session->sessionInit();
     std::ostringstream log;
     log << "EpollTask[" << this << "] addNewSession[" << session << "] fd[" << fd << "]";
     LOG(Info, log.str());
